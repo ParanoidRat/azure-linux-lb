@@ -34,7 +34,7 @@
     }
   },
   "variables": {
-    "networkApiVersion": "parameters('netConfig').networkApiVersion",
+    "networkApiVersion": "[parameters('netConfig').networkApiVersion]",
     "computeApiVersion": "[parameters('vmConfig').computeApiVersion]",
     "updateDomainCount": "[parameters('vmCount')]",
     "faultDomainCount": 3,
