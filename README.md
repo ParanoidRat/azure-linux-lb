@@ -6,10 +6,70 @@ generic cluster in Microsoft Azure Recourses Manager (ARM).
 ## Getting Started
 
 ## Parameters
+```json
+"templateBaseUrl": {"value": "https://raw.githubusercontent.com/ParanoidRat/azure-linux-lb/master"},
+"vmNamespace": { "value": "fustercluck" },
+"vmCount": { "value": 2 },
 
+"vmConfig": { "value": {
+  "computeApiVersion": "2017-03-30",
+
+  "vmSize": "Standard_DS2",
+
+  "osManagedDiskType": "Premium_LRS",
+  "osManagedDiskCache": "ReadWrite",
+
+  "dataManagedDiskEnabledOrDisabled": "Enabled",
+  "dataManagedDiskType": "Premium_LRS",
+  "dataManagedDiskCount": 4,
+  "dataManagedDiskSizeGb": 64,
+  "dataManagedDiskCache": "None",
+
+  "tags": {
+    "Environment": "Development"
+  },
+
+  "imagePublisher": "Canonical",
+  "imageOffer": "UbuntuServer",
+  "imageSKU": "16.04-LTS",
+
+  "adminUsername": "<USER-NAME>",
+  "sshPublicKey": "ssh-rsa <SSH-PUB-KEY>",
+
+  "sshPort": "22"
+} },
+
+"netConfig": { "value": {
+  "networkApiVersion": "2017-06-01",
+
+  "publicIPAddressType": "Static",
+
+  "sshAllowedFrom": [
+    "8.8.8.8/32",
+    "4.4.4.4/32"
+  ],
+
+  "vNetName": "<VNET-NAME>",
+  "vNetAddressPrefix": "10.0.0.0/16",
+
+  "vNetSubnets": [
+    {
+      "name": "subnet-ext",
+      "prefix": "10.0.1.0/24",
+      "allocateFrom":"10.0.1.4"
+    },
+    {
+      "name": "subnet-int",
+      "prefix": "10.0.2.0/24",
+      "allocateFrom":"10.0.2.4"
+    }
+  ]
+} }
+}
+```
 
 ## Authors
--   **ParanoidRat** - *Initial Ansible Filebeat role* - [ParanoidRat] [1]
+-   [**ParanoidRat**] [1]
 
 ## License
 The work is licensed under the CC-BY-SA 4.0 License. Unless otherwise stated,
