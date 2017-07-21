@@ -231,6 +231,10 @@
       "name": "[concat(parameters('vmNamespace'), '-nested-vms')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "[variables('networkApiVersion')]",
+      "dependsOn": [
+        "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetName'))]",
+        "[concat('Microsoft.Network/networkInterfaces/', parameters('vmNamespace'), '0-nic')]"
+      ],
       "properties": {
         "mode": "Incremental",
         "templateLink": {
