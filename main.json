@@ -245,10 +245,10 @@
             "value": "[parameters('vmNamespace')]"
           },
           "vmCount": {
-            "value": "[]"
+            "value": "[parameters('vmCount')]"
           },
           "vmConfig": {
-            "value": "[]"
+            "value": "[parameters('vmConfig')]"
           }
         }
       }
