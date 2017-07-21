@@ -231,10 +231,6 @@
       "name": "nested-deployment-vms",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "[variables('computeApiVersion')]",
-      "dependsOn": [
-        "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetName'))]",
-        "[concat('Microsoft.Network/networkInterfaces/', parameters('vmNamespace'), copyIndex(), '-nic')]"
-      ],
       "properties": {
         "mode": "Incremental",
         "templateLink": {
