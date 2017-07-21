@@ -41,10 +41,6 @@
       "name": "[concat(parameters('vmNamespace'), copyIndex())]",
       "location": "[resourceGroup().location]",
       "tags": "[parameters('vmConfig').tags]",
-      "dependsOn": [
-        "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetName'))]",
-        "[concat('Microsoft.Network/networkInterfaces/', parameters('vmNamespace'), copyIndex(), '-nic')]"
-      ],
       "properties": {
         "availabilitySet": {
           "id": "[resourceId('Microsoft.Compute/availabilitySets', variables('availabilitySetName'))]"
