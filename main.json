@@ -230,7 +230,7 @@
     {
       "name": "nested-deployment-vms",
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2017-06-01",
+      "apiVersion": "[variables('computeApiVersion')]",
       "properties": {
         "mode": "Incremental",
         "templateLink": {
