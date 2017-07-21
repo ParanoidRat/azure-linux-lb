@@ -1,0 +1,267 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "templateBaseUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Base uri for nested templates"
+      }
+    },
+    "vmNamespace": {
+      "type": "string",
+      "metadata": {
+        "description": "Unique namespace for cluster"
+      }
+    },
+    "vmCount": {
+      "type": "int",
+      "metadata": {
+        "description": "Number of VMs in cluster"
+      }
+    },
+    "vmConfig": {
+      "type": "object",
+      "metadata": {
+        "description": "Structure with VM config"
+      }
+    },
+    "netConfig": {
+      "type": "object",
+      "metadata": {
+        "description": "Structure with vNet config"
+      }
+    }
+  },
+  "variables": {
+    "networkApiVersion": "parameters('netConfig').networkApiVersion",
+    "computeApiVersion": "[parameters('vmConfig').computeApiVersion]",
+    "updateDomainCount": "[parameters('vmCount')]",
+    "faultDomainCount": 3,
+    "extSubnetIndex": 0,
+    "intSubnetIndex": 1,
+    "location": "[resourceGroup().location]",
+    "configHashVm": {
+      "Enabled": "[concat(parameters('templateBaseUrl'), '/vm-datadisks-enabled.json')]",
+      "Disabled": "[concat(parameters('templateBaseUrl'), '/vm-datadisks-disabled.json')]"
+    },
+    "templateVmUrl": "[variables('configHashVm')[parameters('vmConfig').dataManagedDiskEnabledOrDisabled]]",
+    "clusterName": "[concat(parameters('vmNamespace'), '-cluster')]",
+    "availabilitySetName":"[concat(parameters('vmNamespace'), '-avs')]",
+    "publicIPAddressName": "[concat(parameters('vmNamespace'), '-ip')]",
+    "virtualNetworkName": "[parameters('netConfig').vNetName]",
+    "virtualNetworkId": "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]",
+    "extSubnetId": "[concat(variables('virtualNetworkId'), '/subnets/', parameters('netConfig').vNetSubnets[variables('extSubnetIndex')].name)]",
+    "intSubnetId": "[concat(variables('virtualNetworkId'), '/subnets/', parameters('netConfig').vNetSubnets[variables('intSubnetIndex')].name)]",
+    "loadBalancerName": "[concat(parameters('vmNamespace'), '-lb')]",
+    "loadBalancerId": "[resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName'))]",
+    "fePoolName": "[concat(parameters('vmNamespace'), '-pool-front')]",
+    "bePoolName": "[concat(parameters('vmNamespace'), '-pool-back')]",
+    "natStartPort": 22000
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Compute/availabilitySets",
+      "name": "[variables('availabilitySetName')]",
+      "apiVersion": "[variables('computeApiVersion')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "PlatformUpdateDomainCount": "[variables('updateDomainCount')]",
+        "PlatformFaultDomainCount": "[variables('faultDomainCount')]"
+      },
+      "sku": {
+        "name": "Aligned"
+      }
+    },
+    {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[variables('virtualNetworkName')]",
+      "location": "[variables('location')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[parameters('netConfig').vNetAddressPrefix]"
+          ]
+        },
+        "copy": [{
+          "name": "subnets",
+          "count": "[length(parameters('netConfig').vNetSubnets)]",
+          "input": {
+            "name": "[parameters('netConfig').vNetSubnets[copyIndex('subnets')].name]",
+            "properties": {
+              "addressPrefix": "[parameters('netConfig').vNetSubnets[copyIndex('subnets')].prefix]"
+            }
+          }
+        }]
+      }
+    },
+    {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[variables('publicIPAddressName')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
+      ],
+      "properties": {
+        "publicIPAllocationMethod": "[parameters('netConfig').publicIPAddressType]",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('clusterName')]"
+        }
+      }
+    },
+    {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "type": "Microsoft.Network/loadBalancers",
+      "name": "[variables('loadBalancerName')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]"
+      ],
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "name": "[variables('fePoolName')]",
+            "properties": {
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
+              }
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "[variables('bePoolName')]"
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "copy": {
+        "name": "[concat(parameters('vmNamespace'), '-loop-lb-nat-ssh')]",
+        "count": "[parameters('vmCount')]"
+      },
+      "type": "Microsoft.Network/loadBalancers/inboundNatRules",
+      "name": "[concat(variables('loadBalancerName'), '/', 'SSH-NAT0', copyIndex())]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]"
+      ],
+      "properties": {
+        "frontendIPConfiguration": {
+          "id": "[concat(variables('loadBalancerId'),'/frontendIPConfigurations/', variables('fePoolName'))]"
+        },
+        "protocol": "tcp",
+        "frontendPort": "[copyIndex(variables('natStartPort'))]",
+        "backendPort": "[parameters('vmConfig').sshPort]",
+        "enableFloatingIP": false
+      }
+    },
+    {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "copy": {
+        "name": "[concat(parameters('vmNamespace'), '-loop-nsg')]",
+        "count": "[parameters('vmCount')]"
+      },
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[concat(parameters('vmNamespace'), copyIndex(), '-nsg')]",
+      "location": "[variables('location')]",
+      "properties": {
+        "copy": [{
+          "name": "securityRules",
+          "count": "[length(parameters('netConfig').sshAllowedFrom)]",
+          "input": {
+            "name": "[concat('SSH-HOST0', copyIndex('securityRules', 1))]",
+            "properties": {
+              "description": "Allows inbound SSH from specific host",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "[parameters('vmConfig').sshPort]",
+              "sourceAddressPrefix": "[parameters('netConfig').sshAllowedFrom[copyIndex('securityRules')]]",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": "[mul(copyIndex('securityRules', 1), 100)]",
+              "direction": "Inbound"
+            }
+          }
+        }]
+      }
+    },
+    {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "copy": {
+        "name": "[concat(parameters('vmNamespace'), '-loop-nic')]",
+        "count": "[parameters('vmCount')]"
+      },
+      "name": "[concat(parameters('vmNamespace'), copyIndex(), '-nic')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]",
+        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'), '/inboundNatRules/', 'SSH-NAT0', copyIndex())]"
+      ],
+      "properties": {
+        "networkSecurityGroup": {
+         "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(parameters('vmNamespace'), copyIndex(), '-nsg'))]"
+        },
+        "ipConfigurations": [
+          {
+            "name": "[concat(parameters('vmNamespace'), copyIndex(), '-ipcfg')]",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('intSubnetId')]"
+              },
+              "loadBalancerBackendAddressPools": [
+                { "id": "[concat(variables('loadBalancerId'), '/backendAddressPools/', variables('bePoolName'))]" }
+              ],
+              "loadBalancerInboundNatRules": [
+                {
+                  "id": "[concat(variables('loadBalancerId'), '/inboundNatRules/', 'SSH-NAT0', copyIndex())]"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "nested-deployment-vms",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "[variables('computeApiVersion')]",
+      "dependsOn": [
+        "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetName'))]",
+        "[concat('Microsoft.Network/networkInterfaces/', parameters('vmNamespace'), copyIndex(), '-nic')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('templateVmURL')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "templateBaseUrl": {
+            "value": "[parameters('templateBaseUrl')]"
+          },
+          "vmNamespace": {
+            "value": "[parameters('vmNamespace')]"
+          },
+          "vmCount": {
+            "value": "[]"
+          },
+          "vmConfig": {
+            "value": "[]"
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "vmFQDN": {
+      "value": "[concat(reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName')),providers('Microsoft.Network', 'publicIPAddresses').apiVersions[0]).dnsSettings.fqdn)]",
+      "type": "string"
+    }
+  }
+}

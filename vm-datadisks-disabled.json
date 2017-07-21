@@ -1,0 +1,100 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "templateBaseUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Base uri for nested templates"
+      }
+    },
+    "vmNamespace": {
+      "type": "string",
+      "metadata": {
+        "description": "Unique namespace for cluster"
+      }
+    },
+    "vmCount": {
+      "type": "int",
+      "metadata": {
+        "description": "Number of VMs in cluster"
+      }
+    },
+    "vmConfig": {
+      "type": "object",
+      "metadata": {
+        "description": "Structure with VM config"
+      }
+    }
+  },
+  "variables": {
+    "availabilitySetName":"[concat(parameters('vmNamespace'), '-avs')]"
+  },
+  "resources": [
+    {
+      "apiVersion": "[parameters('vmConfig').computeApiVersion]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "copy": {
+        "name": "[concat(parameters('vmNamespace'), '-loop-vms')]",
+        "count": "[parameters('vmCount')]"
+      },
+      "name": "[concat(parameters('vmNamespace'), copyIndex())]",
+      "location": "[resourceGroup().location]",
+      "tags": "[parameters('vmConfig').tags]",
+      "dependsOn": [
+        "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetName'))]",
+        "[concat('Microsoft.Network/networkInterfaces/', parameters('vmNamespace'), copyIndex(), '-nic')]"
+      ],
+      "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', variables('availabilitySetName'))]"
+        },
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmConfig').vmSize]"
+        },
+        "osProfile": {
+          "computerName": "[concat(parameters('vmNamespace'), copyIndex())]",
+          "adminUsername": "[parameters('vmConfig').adminUsername]",
+          "linuxConfiguration": {
+            "disablePasswordAuthentication": "true",
+            "ssh": {
+              "publicKeys": [
+                {
+                  "path": "[concat('/home/', parameters('vmConfig').adminUsername, '/.ssh/authorized_keys')]",
+                  "keyData": "[parameters('vmConfig').sshPublicKey]"
+                }
+              ]
+            }
+          }
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[parameters('vmConfig').imagePublisher]",
+            "offer": "[parameters('vmConfig').imageOffer]",
+            "sku": "[parameters('vmConfig').imageSKU]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "osType": "Linux",
+            "caching": "[parameters('vmConfig').osManagedDiskCache]",
+            "name": "[concat(parameters('vmNamespace'), copyIndex(), '-os')]",
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "[parameters('vmConfig').osManagedDiskType]"
+            }
+          },
+          "dataDisks": [ ]
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmNamespace'), copyIndex(), '-nic'))]"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "outputs": {
+  }
+}
