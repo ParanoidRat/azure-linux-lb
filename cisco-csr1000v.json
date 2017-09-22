@@ -30,7 +30,7 @@
     "variables": {
         "networkApiVersion": "[parameters('netConfig').networkApiVersion]",
         "computeApiVersion": "[parameters('vmConfig').computeApiVersion]",
-        "location": "[variables('location')]",
+        "location": "[resourceGroup().location]",
         "publicIPAddressName": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-ip')]",
         "Subnet1Name":"[parameters('vNetSubnets')[0].name]",
         "Subnet1Name":"[parameters('vNetSubnets')[1].name]",
