@@ -32,8 +32,8 @@
         "computeApiVersion": "[parameters('vmConfig').computeApiVersion]",
         "location": "[resourceGroup().location]",
         "publicIPAddressName": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-ip')]",
-        "Subnet1Name":"[parameters('vNetSubnets')[0].name]",
-        "Subnet1Name":"[parameters('vNetSubnets')[1].name]",
+        "Subnet1Name":"[parameters('netConfig').vNetSubnets[0].name]",
+        "Subnet1Name":"[parameters('netConfig').vNetSubnets[1].name]",
         "subnet1ResourceId": "[resourceId(parameters('virtualNetworkResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', parameters('netConfig').vNetName, variables('Subnet1Name'))]",
         "subnet2ResourceId": "[resourceId(parameters('virtualNetworkResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', parameters('netConfig').vNetName, variables('Subnet2Name'))]"
     },
