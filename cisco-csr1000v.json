@@ -79,7 +79,7 @@
         {
             "apiVersion": "[variables('networkApiVersion')]",
             "type": "Microsoft.Network/routeTables",
-            "name": "[concat(parameters('Subnet1Name'),'-CSR-RouteTable')]",
+            "name": "[concat(variables('Subnet1Name'),'-CSR-RouteTable')]",
             "location": "[variables('location')]",
             "properties": {
                 "routes": [
@@ -97,7 +97,7 @@
         {
             "apiVersion": "[variables('networkApiVersion')]",
             "type": "Microsoft.Network/routeTables",
-            "name": "[concat(parameters('subnet2Name'),'-CSR-RouteTable')]",
+            "name": "[concat(variables('Subnet2Name'),'-CSR-RouteTable')]",
             "location": "[variables('location')]",
             "properties": {
                 "routes": [
