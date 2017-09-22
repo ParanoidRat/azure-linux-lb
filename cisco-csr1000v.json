@@ -77,32 +77,6 @@
           }
         },
         {
-          "apiVersion": "[variables('networkApiVersion')]",
-          "type": "Microsoft.Network/networkSecurityGroups",
-          "name": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nsg-udp')]",
-          "location": "[variables('location')]",
-          "properties": {
-            "copy": [{
-              "name": "securityRulesUdp",
-              "count": "[length(parameters('netConfig').udpAllowedPorts)]",
-              "input": {
-                "name": "[concat('UDP-RULE0', copyIndex('securityRulesUdp', 1))]",
-                "properties": {
-                  "description": "Allows inbound UDP port from any",
-                  "protocol": "Udp",
-                  "sourcePortRange": "*",
-                  "destinationPortRange": "[parameters('netConfig').udpAllowedPorts[copyIndex('securityRulesUdp')]]",
-                  "sourceAddressPrefix": "Internet",
-                  "destinationAddressPrefix": "*",
-                  "access": "Allow",
-                  "priority": "[mul(copyIndex('securityRules', 1), 100)]",
-                  "direction": "Inbound"
-                }
-              }
-            }]
-          }
-        },
-        {
             "apiVersion": "[variables('networkApiVersion')]",
             "type": "Microsoft.Network/routeTables",
             "name": "[concat(parameters('subnet1Name'),'-CSR-RouteTable')]",
