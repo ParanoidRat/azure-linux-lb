@@ -2,137 +2,111 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "adminUsername": {
-            "type": "string",
-            "metadata": {
-                "description": "Username for the Virtual Machine."
-            }
+        "vmNamespace": {
+          "type": "string",
+          "metadata": {
+            "description": "Unique namespace for resources"
+          }
         },
-        "adminPassword": {
-            "type": "securestring",
-            "metadata": {
-                "description": "Password for the Virtual Machine."
-            }
+        "vmConfig": {
+          "type": "object",
+          "metadata": {
+            "description": "Structure with VM config"
+          }
+        },
+        "netConfig": {
+          "type": "object",
+          "metadata": {
+            "description": "Structure with vNet config"
+          }
         },
         "virtualNetworkResourceGroupName": {
             "type": "string",
             "metadata": {
                 "description": "Name of the resource group that contains the existing virutal network."
             }
-        },
-        "virtualNetworkName": {
-            "type": "string",
-            "metadata": {
-                "description": "Name of the existing virutal network the router will be deployed to."
-            }
-        },
-        "subnet1Name": {
-            "type": "string",
-            "metadata": {
-                "description": "Name of the first subnet."
-            }
-        },
-        "subnet2Name": {
-            "type": "string",
-            "metadata": {
-                "description": "Name of the second subnet."
-            }
         }
     },
     "variables": {
-        "imagePublisher": "cisco",
-        "imageOffer": "cisco-csr-1000v",
-        "imageSKU": "csr-azure-byol",
-        "storageAccountName": "[concat('vhds', uniqueString(resourceGroup().id))]",
-        "publicIPAddressName": "publicIP",
-        "dnsPrefix": "[concat('csr-', uniqueString(resourceGroup().id))]",
-        "vmName": "CSR",
-        "vmSize": "Standard_D2_V2",
-        "subnet1ResourceId": "[resourceId(parameters('virtualNetworkResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), parameters('Subnet1Name'))]",
-        "subnet2ResourceId": "[resourceId(parameters('virtualNetworkResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), parameters('Subnet2Name'))]",
-        "nsgname": "[concat(variables('vmName'),'-SSH-SecurityGroup')]"
+        "networkApiVersion": "[parameters('netConfig').networkApiVersion]",
+        "computeApiVersion": "[parameters('vmConfig').computeApiVersion]",
+        "location": "[variables('location')]",
+        "publicIPAddressName": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-ip')]",
+        "Subnet1Name":"[parameters('vNetSubnets')[0].name]",
+        "Subnet1Name":"[parameters('vNetSubnets')[1].name]",
+        "subnet1ResourceId": "[resourceId(parameters('virtualNetworkResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', parameters('netConfig').vNetName, variables('Subnet1Name'))]",
+        "subnet2ResourceId": "[resourceId(parameters('virtualNetworkResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', parameters('netConfig').vNetName, variables('Subnet2Name'))]"
     },
     "resources": [
         {
-            "type": "Microsoft.Storage/storageAccounts",
-            "name": "[variables('storageAccountName')]",
-            "apiVersion": "2016-01-01",
-            "location": "[resourceGroup().location]",
-            "sku": {
-                "name": "Standard_LRS"
-            },
-            "kind": "Storage",
-            "properties": {}
-        },
-        {
-            "apiVersion": "2016-03-30",
+            "apiVersion": "[variables('networkApiVersion')]",
             "type": "Microsoft.Network/publicIPAddresses",
             "name": "[variables('publicIPAddressName')]",
-            "location": "[resourceGroup().location]",
+            "location": "[variables('location')]",
             "properties": {
                 "publicIPAllocationMethod": "Dynamic",
                 "dnsSettings": {
-                    "domainNameLabel": "[variables('dnsPrefix')]"
+                    "domainNameLabel": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName)]"
                 }
             }
         },
         {
-            "apiVersion": "2015-06-15",
-            "type": "Microsoft.Network/networkSecurityGroups",
-            "name": "[variables('nsgName')]",
-            "location": "[resourceGroup().location]",
-            "properties": {
-                "securityRules": [
-                    {
-                        "name": "SSH-Rule",
-                        "properties": {
-                            "description": "Allow SSH",
-                            "protocol": "Tcp",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "22",
-                            "sourceAddressPrefix": "Internet",
-                            "destinationAddressPrefix": "*",
-                            "access": "Allow",
-                            "priority": 100,
-                            "direction": "Inbound"
-                        }
-                    },
-                    {
-                        "name": "UDP-Rule1",
-                        "properties": {
-                            "description": "Allow UDP",
-                            "protocol": "Udp",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "500",
-                            "sourceAddressPrefix": "Internet",
-                            "destinationAddressPrefix": "*",
-                            "access": "Allow",
-                            "priority": 101,
-                            "direction": "Inbound"
-                        }
-                    },
-                    {
-                        "name": "UDP-Rule2",
-                        "properties": {
-                            "description": "Allow UDP",
-                            "protocol": "Udp",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "4500",
-                            "sourceAddressPrefix": "Internet",
-                            "destinationAddressPrefix": "*",
-                            "access": "Allow",
-                            "priority": 102,
-                            "direction": "Inbound"
-                        }
-                    }
-                ]
-            }
+          "apiVersion": "[variables('networkApiVersion')]",
+          "type": "Microsoft.Network/networkSecurityGroups",
+          "name": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, 'nsg')]",
+          "location": "[variables('location')]",
+          "properties": {
+            "copy": [{
+              "name": "securityRules",
+              "count": "[length(parameters('netConfig').sshAllowedFrom)]",
+              "input": {
+                "name": "[concat('SSH-HOST0', copyIndex('securityRules', 1))]",
+                "properties": {
+                  "description": "Allows inbound SSH from specific host",
+                  "protocol": "Tcp",
+                  "sourcePortRange": "*",
+                  "destinationPortRange": "22",
+                  "sourceAddressPrefix": "[parameters('netConfig').sshAllowedFrom[copyIndex('securityRules')]]",
+                  "destinationAddressPrefix": "*",
+                  "access": "Allow",
+                  "priority": "[mul(copyIndex('securityRules', 1), 100)]",
+                  "direction": "Inbound"
+                }
+              }
+            }]
+          }
         },
         {
+          "apiVersion": "[variables('networkApiVersion')]",
+          "type": "Microsoft.Network/networkSecurityGroups",
+          "name": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nsg-udp')]",
+          "location": "[variables('location')]",
+          "properties": {
+            "copy": [{
+              "name": "securityRulesUdp",
+              "count": "[length(parameters('netConfig').udpAllowedPorts)]",
+              "input": {
+                "name": "[concat('UDP-RULE0', copyIndex('securityRulesUdp', 1))]",
+                "properties": {
+                  "description": "Allows inbound UDP port from any",
+                  "protocol": "Udp",
+                  "sourcePortRange": "*",
+                  "destinationPortRange": "[parameters('netConfig').udpAllowedPorts[copyIndex('securityRulesUdp')]]",
+                  "sourceAddressPrefix": "Internet",
+                  "destinationAddressPrefix": "*",
+                  "access": "Allow",
+                  "priority": "[mul(copyIndex('securityRules', 1), 100)]",
+                  "direction": "Inbound"
+                }
+              }
+            }]
+          }
+        },
+        {
+            "apiVersion": "[variables('networkApiVersion')]",
             "type": "Microsoft.Network/routeTables",
             "name": "[concat(parameters('subnet1Name'),'-CSR-RouteTable')]",
-            "apiVersion": "2015-06-15",
-            "location": "[resourceGroup().location]",
+            "location": "[variables('location')]",
             "properties": {
                 "routes": [
                     {
@@ -147,10 +121,10 @@
             }
         },
         {
+            "apiVersion": "[variables('networkApiVersion')]",
             "type": "Microsoft.Network/routeTables",
             "name": "[concat(parameters('subnet2Name'),'-CSR-RouteTable')]",
-            "apiVersion": "2015-06-15",
-            "location": "[resourceGroup().location]",
+            "location": "[variables('location')]",
             "properties": {
                 "routes": [
                   {
@@ -173,12 +147,12 @@
             }
         },
         {
-            "apiVersion": "2015-06-15",
+            "apiVersion": "[variables('networkApiVersion')]",
             "type": "Microsoft.Network/networkInterfaces",
-            "name": "[concat(variables('vmName'),'-Nic0')]",
-            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nic0')]",
+            "location": "[variables('location')]",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/networkSecurityGroups/', variables('nsgName'))]"
+                "[resourceId('Microsoft.Network/networkSecurityGroups/', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nsg'))]"
             ],
             "properties": {
                 "ipConfigurations": [
@@ -191,19 +165,19 @@
                                 "id": "[variables('subnet1ResourceId')]"
                             },
                             "networkSecurityGroup": {
-                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgname'))]"
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, 'nsg'))]"
                             }
                         }
                     }
                 ],
-                "enableIPForwarding": true              
+                "enableIPForwarding": true
             }
         },
         {
             "apiVersion": "2015-06-15",
             "type": "Microsoft.Network/networkInterfaces",
-            "name": "[concat(variables('vmName'),'-Nic1')]",
-            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nic1')]",
+            "location": "[variables('location')]",
             "dependsOn": [  ],
             "properties": {
                 "ipConfigurations": [
@@ -222,44 +196,50 @@
             }
         },
         {
-            "apiVersion": "2015-06-15",
+            "apiVersion": "[parameters('vmConfig').computeApiVersion]",
             "type": "Microsoft.Compute/virtualMachines",
-            "name": "[variables('vmName')]",
-            "location": "[resourceGroup().location]",
-            "plan": {
-                "name": "csr-azure-byol",
-                "publisher": "cisco",
-                "product": "cisco-csr-1000v"
-            },
+            "name": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName)]",
+            "location": "[variables('location')]",
+            "tags": "[parameters('vmConfig').tags]",
             "dependsOn": [
-                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
-                "[resourceId('Microsoft.Network/networkInterfaces/', concat(variables('vmName'), '-Nic0'))]",
-                "[resourceId('Microsoft.Network/networkInterfaces/', concat(variables('vmName'), '-Nic1'))]"
+                "[resourceId('Microsoft.Network/networkInterfaces/', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nic0'))]",
+                "[resourceId('Microsoft.Network/networkInterfaces/', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nic1'))]"
             ],
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "[variables('vmSize')]"
+                  "vmSize": "[parameters('vmConfig').vmSize]"
                 },
                 "osProfile": {
-                    "computerName": "[variables('vmName')]",
-                    "adminUsername": "[parameters('adminUsername')]",
-                    "adminPassword": "[parameters('adminPassword')]"
+                  "computerName": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName)]",
+                  "adminUsername": "[parameters('vmConfig').adminUsername]",
+                  "linuxConfiguration": {
+                    "disablePasswordAuthentication": "true",
+                    "ssh": {
+                      "publicKeys": [
+                        {
+                          "path": "[concat('/home/', parameters('vmConfig').adminUsername, '/.ssh/authorized_keys')]",
+                          "keyData": "[parameters('vmConfig').sshPublicKey]"
+                        }
+                      ]
+                    }
+                  }
                 },
                 "storageProfile": {
-                    "imageReference": {
-                        "publisher": "[variables('imagePublisher')]",
-                        "offer": "[variables('imageOffer')]",
-                        "sku": "[variables('imageSKU')]",
-                        "version": "latest"
-                    },
-                    "osDisk": {
-                        "name": "osdisk",
-                        "vhd": {
-                            "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))).primaryEndpoints.blob, 'vhds/osdisk.vhd')]"
-                        },
-                        "caching": "ReadWrite",
-                        "createOption": "FromImage"
+                  "imageReference": {
+                    "publisher": "[parameters('vmConfig').imagePublisher]",
+                    "offer": "[parameters('vmConfig').imageOffer]",
+                    "sku": "[parameters('vmConfig').imageSKU]",
+                    "version": "latest"
+                  },
+                  "osDisk": {
+                    "osType": "Linux",
+                    "caching": "[parameters('vmConfig').osManagedDiskCache]",
+                    "name": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-os')]",
+                    "createOption": "FromImage",
+                    "managedDisk": {
+                      "storageAccountType": "[parameters('vmConfig').osManagedDiskType]"
                     }
+                  }
                 },
                 "networkProfile": {
                     "networkInterfaces": [
@@ -267,21 +247,15 @@
                             "properties": {
                                 "primary": true
                             },
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('vmName'),'-Nic0'))]"
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nic0'))]"
                         },
                         {
                             "properties": {
                                 "primary": false
                             },
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('vmName'),'-Nic1'))]"
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nic1'))]"
                         }
                     ]
-                },
-                "diagnosticsProfile": {
-                    "bootDiagnostics": {
-                        "enabled": "true",
-                        "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))).primaryEndpoints.blob]"
-                    }
                 }
             }
         }
