@@ -53,7 +53,7 @@
         {
           "apiVersion": "[variables('networkApiVersion')]",
           "type": "Microsoft.Network/networkSecurityGroups",
-          "name": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, 'nsg')]",
+          "name": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nsg')]",
           "location": "[variables('location')]",
           "properties": {
             "copy": [{
