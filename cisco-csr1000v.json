@@ -165,6 +165,11 @@
         "type": "Microsoft.Compute/virtualMachines",
         "name": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName)]",
         "location": "[variables('location')]",
+        "plan": {
+          "name": "[parameters('vmConfig').imageSKU]",
+          "publisher": "[parameters('vmConfig').imagePublisher]",
+          "product": "[parameters('vmConfig').imageOffer]"
+        },
         "tags": "[parameters('vmConfig').tags]",
         "dependsOn": [
           "[resourceId('Microsoft.Network/networkInterfaces/', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nic0'))]",
