@@ -2,242 +2,231 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "vmNamespace": {
-          "type": "string",
-          "metadata": {
-            "description": "Unique namespace for resources"
-          }
-        },
-        "vmConfig": {
-          "type": "object",
-          "metadata": {
-            "description": "Structure with VM config"
-          }
-        },
-        "netConfig": {
-          "type": "object",
-          "metadata": {
-            "description": "Structure with vNet config"
-          }
-        },
-        "virtualNetworkResourceGroupName": {
-            "type": "string",
-            "metadata": {
-                "description": "Name of the resource group that contains the existing virutal network."
-            }
+      "vmNamespace": {
+        "type": "string",
+        "metadata": {
+          "description": "Unique namespace for resources"
         }
+      },
+      "vmConfig": {
+        "type": "object",
+        "metadata": {
+          "description": "Structure with VM config"
+        }
+      },
+      "netConfig": {
+        "type": "object",
+        "metadata": {
+          "description": "Structure with vNet config"
+        }
+      }
     },
     "variables": {
-        "networkApiVersion": "[parameters('netConfig').networkApiVersion]",
-        "computeApiVersion": "[parameters('vmConfig').computeApiVersion]",
-        "location": "[resourceGroup().location]",
-        "publicIPAddressName": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-ip')]",
-        "Subnet1Name":"[parameters('netConfig').vNetSubnets[0].name]",
-        "Subnet2Name":"[parameters('netConfig').vNetSubnets[1].name]",
-        "subnet1ResourceId": "[resourceId(parameters('virtualNetworkResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', parameters('netConfig').vNetName, variables('Subnet1Name'))]",
-        "subnet2ResourceId": "[resourceId(parameters('virtualNetworkResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', parameters('netConfig').vNetName, variables('Subnet2Name'))]"
+      "networkApiVersion": "[parameters('netConfig').networkApiVersion]",
+      "computeApiVersion": "[parameters('vmConfig').computeApiVersion]",
+      "location": "[resourceGroup().location]",
+      "publicIPAddressName": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-ip')]",
+      "subnetExtName":"[parameters('netConfig').vNetSubnets[2].name]",
+      "subnetIntName":"[parameters('netConfig').vNetSubnets[3].name]",
+      "subnetExtId": "[resourceId(parameters('netConfig').vNetRGName, 'Microsoft.Network/virtualNetworks/subnets', parameters('netConfig').vNetName, variables('subnetExtName'))]",
+      "subnetIntId": "[resourceId(parameters('netConfig').vNetRGName, 'Microsoft.Network/virtualNetworks/subnets', parameters('netConfig').vNetName, variables('subnetIntName'))]"
     },
     "resources": [
-        {
-            "apiVersion": "[variables('networkApiVersion')]",
-            "type": "Microsoft.Network/publicIPAddresses",
-            "name": "[variables('publicIPAddressName')]",
-            "location": "[variables('location')]",
-            "properties": {
-                "publicIPAllocationMethod": "Dynamic",
-                "dnsSettings": {
-                    "domainNameLabel": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName)]"
-                }
+      {
+        "apiVersion": "[variables('networkApiVersion')]",
+        "type": "Microsoft.Network/publicIPAddresses",
+        "name": "[variables('publicIPAddressName')]",
+        "location": "[variables('location')]",
+        "properties": {
+          "publicIPAllocationMethod": "Dynamic",
+          "dnsSettings": {
+            "domainNameLabel": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName)]"
+          }
+        }
+      },
+      {
+        "apiVersion": "[variables('networkApiVersion')]",
+        "type": "Microsoft.Network/networkSecurityGroups",
+        "name": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nsg')]",
+        "location": "[variables('location')]",
+        "properties": {
+          "copy": [{
+            "name": "securityRules",
+            "count": "[length(parameters('netConfig').sshAllowedFrom)]",
+            "input": {
+              "name": "[concat('SSH-HOST0', copyIndex('securityRules', 1))]",
+              "properties": {
+                "description": "Allows inbound SSH from specific host",
+                "protocol": "Tcp",
+                "sourcePortRange": "*",
+                "destinationPortRange": "22",
+                "sourceAddressPrefix": "[parameters('netConfig').sshAllowedFrom[copyIndex('securityRules')]]",
+                "destinationAddressPrefix": "*",
+                "access": "Allow",
+                "priority": "[mul(copyIndex('securityRules', 1), 100)]",
+                "direction": "Inbound"
+              }
             }
-        },
-        {
-          "apiVersion": "[variables('networkApiVersion')]",
-          "type": "Microsoft.Network/networkSecurityGroups",
-          "name": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nsg')]",
-          "location": "[variables('location')]",
-          "properties": {
-            "copy": [{
-              "name": "securityRules",
-              "count": "[length(parameters('netConfig').sshAllowedFrom)]",
-              "input": {
-                "name": "[concat('SSH-HOST0', copyIndex('securityRules', 1))]",
-                "properties": {
-                  "description": "Allows inbound SSH from specific host",
-                  "protocol": "Tcp",
-                  "sourcePortRange": "*",
-                  "destinationPortRange": "22",
-                  "sourceAddressPrefix": "[parameters('netConfig').sshAllowedFrom[copyIndex('securityRules')]]",
-                  "destinationAddressPrefix": "*",
-                  "access": "Allow",
-                  "priority": "[mul(copyIndex('securityRules', 1), 100)]",
-                  "direction": "Inbound"
+          }]
+        }
+      },
+      {
+        "apiVersion": "[variables('networkApiVersion')]",
+        "type": "Microsoft.Network/routeTables",
+        "name": "[concat(variables('subnetExtName'),'-CSR-RouteTable')]",
+        "location": "[variables('location')]",
+        "properties": {
+          "routes": [
+            { "name": "Route-SubnetInt-To-CSR",
+              "properties": {
+                "addressPrefix": "[reference(variables('subnetIntId'), providers('Microsoft.Network', 'virtualNetworks').apiVersions[0]).addressPrefix]",
+                "nextHopType": "VirtualAppliance",
+                "nextHopIpAddress": "[string(take(split(replace(reference(variables('subnetExtId'), providers('Microsoft.Network', 'virtualNetworks').apiVersions[0]).addressPrefix, '0/', '4/'), '/'), 1)[0])]"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "apiVersion": "[variables('networkApiVersion')]",
+        "type": "Microsoft.Network/routeTables",
+        "name": "[concat(variables('subnetIntName'),'-CSR-RouteTable')]",
+        "location": "[variables('location')]",
+        "properties": {
+          "routes": [
+            { "name": "Route-SubnetExt-To-CSR",
+              "properties": {
+                  "addressPrefix": "[reference(variables('subnetExtId'), providers('Microsoft.Network', 'virtualNetworks').apiVersions[0]).addressPrefix]",
+                  "nextHopType": "VirtualAppliance",
+                  "nextHopIpAddress": "[string(take(split(replace(reference(variables('subnetIntId'), providers('Microsoft.Network', 'virtualNetworks').apiVersions[0]).addressPrefix, '0/', '4/'), '/'), 1)[0])]"
+              }
+            },
+            { "name": "Default-Route-To-CSR",
+              "properties": {
+                  "addressPrefix": "0.0.0.0/0",
+                  "nextHopType": "VirtualAppliance",
+                  "nextHopIpAddress": "[string(take(split(replace(reference(variables('subnetIntId'), providers('Microsoft.Network', 'virtualNetworks').apiVersions[0]).addressPrefix, '0/', '4/'), '/'), 1)[0])]"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "apiVersion": "[variables('networkApiVersion')]",
+        "type": "Microsoft.Network/networkInterfaces",
+        "name": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nic0')]",
+        "location": "[variables('location')]",
+        "dependsOn": [
+          "[resourceId('Microsoft.Network/networkSecurityGroups/', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nsg'))]"
+        ],
+        "properties": {
+          "networkSecurityGroup": {
+            "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, 'nsg'))]"
+          },
+          "ipConfigurations": [
+            { "name": "ipconfig1",
+              "properties": {
+                "privateIPAllocationMethod": "Dynamic",
+                "publicIPAddress": {
+                  "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
+                },
+                "subnet": {
+                  "id": "[variables('subnetExtId')]"
                 }
               }
-            }]
-          }
-        },
-        {
-            "apiVersion": "[variables('networkApiVersion')]",
-            "type": "Microsoft.Network/routeTables",
-            "name": "[concat(variables('Subnet1Name'),'-CSR-RouteTable')]",
-            "location": "[variables('location')]",
-            "properties": {
-                "routes": [
-                    {
-                    "name": "Route-Subnet2-To-CSR",
-                        "properties": {
-                            "addressPrefix": "[reference(variables('subnet2ResourceId'), providers('Microsoft.Network', 'virtualNetworks').apiVersions[0]).addressPrefix]",
-                            "nextHopType": "VirtualAppliance",
-                            "nextHopIpAddress": "[string(take(split(replace(reference(variables('subnet1ResourceId'), providers('Microsoft.Network', 'virtualNetworks').apiVersions[0]).addressPrefix, '0/', '4/'), '/'), 1)[0])]"
-                        }
-                    }
-                ]
             }
-        },
-        {
-            "apiVersion": "[variables('networkApiVersion')]",
-            "type": "Microsoft.Network/routeTables",
-            "name": "[concat(variables('Subnet2Name'),'-CSR-RouteTable')]",
-            "location": "[variables('location')]",
-            "properties": {
-                "routes": [
-                  {
-                    "name": "Route-Subnet1-To-CSR",
-                    "properties": {
-                        "addressPrefix": "[reference(variables('subnet1ResourceId'), providers('Microsoft.Network', 'virtualNetworks').apiVersions[0]).addressPrefix]",
-                        "nextHopType": "VirtualAppliance",
-                        "nextHopIpAddress": "[string(take(split(replace(reference(variables('subnet2ResourceId'), providers('Microsoft.Network', 'virtualNetworks').apiVersions[0]).addressPrefix, '0/', '4/'), '/'), 1)[0])]"
-                    }
-                  },
-                  {
-                    "name": "Default-Route-To-CSR",
-                    "properties": {
-                        "addressPrefix": "0.0.0.0/0",
-                        "nextHopType": "VirtualAppliance",
-                        "nextHopIpAddress": "[string(take(split(replace(reference(variables('subnet2ResourceId'), providers('Microsoft.Network', 'virtualNetworks').apiVersions[0]).addressPrefix, '0/', '4/'), '/'), 1)[0])]"
-                    }
-                  }
-              ]
-            }
-        },
-        {
-            "apiVersion": "[variables('networkApiVersion')]",
-            "type": "Microsoft.Network/networkInterfaces",
-            "name": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nic0')]",
-            "location": "[variables('location')]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/networkSecurityGroups/', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nsg'))]"
-            ],
-            "properties": {
-                "ipConfigurations": [
-                    {
-                        "name": "ipconfig1",
-                        "properties": {
-                            "privateIPAllocationMethod": "Static",
-                            "privateIPAddress": "[string(take(split(replace(reference(variables('subnet1ResourceId'), providers('Microsoft.Network', 'virtualNetworks').apiVersions[0]).addressPrefix, '0/', '4/'), '/'), 1)[0])]",
-                            "subnet": {
-                                "id": "[variables('subnet1ResourceId')]"
-                            },
-                            "networkSecurityGroup": {
-                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, 'nsg'))]"
-                            }
-                        }
-                    }
-                ],
-                "enableIPForwarding": true
-            }
-        },
-        {
-            "apiVersion": "2015-06-15",
-            "type": "Microsoft.Network/networkInterfaces",
-            "name": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nic1')]",
-            "location": "[variables('location')]",
-            "dependsOn": [  ],
-            "properties": {
-                "ipConfigurations": [
-                    {
-                        "name": "ipconfig1",
-                        "properties": {
-                            "privateIPAllocationMethod": "Static",
-                            "privateIPAddress": "[string(take(split(replace(reference(variables('subnet2ResourceId'), providers('Microsoft.Network', 'virtualNetworks').apiVersions[0]).addressPrefix, '0/', '4/'), '/'), 1)[0])]",
-                            "subnet": {
-                                "id": "[variables('subnet2ResourceId')]"
-                            }
-                        }
-                    }
-                ],
-                "enableIPForwarding": true
-            }
-        },
-        {
-            "apiVersion": "[parameters('vmConfig').computeApiVersion]",
-            "type": "Microsoft.Compute/virtualMachines",
-            "name": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName)]",
-            "location": "[variables('location')]",
-            "tags": "[parameters('vmConfig').tags]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/networkInterfaces/', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nic0'))]",
-                "[resourceId('Microsoft.Network/networkInterfaces/', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nic1'))]"
-            ],
-            "properties": {
-                "hardwareProfile": {
-                  "vmSize": "[parameters('vmConfig').vmSize]"
-                },
-                "osProfile": {
-                  "computerName": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName)]",
-                  "adminUsername": "[parameters('vmConfig').adminUsername]",
-                  "linuxConfiguration": {
-                    "disablePasswordAuthentication": "true",
-                    "ssh": {
-                      "publicKeys": [
-                        {
-                          "path": "[concat('/home/', parameters('vmConfig').adminUsername, '/.ssh/authorized_keys')]",
-                          "keyData": "[parameters('vmConfig').sshPublicKey]"
-                        }
-                      ]
-                    }
-                  }
-                },
-                "storageProfile": {
-                  "imageReference": {
-                    "publisher": "[parameters('vmConfig').imagePublisher]",
-                    "offer": "[parameters('vmConfig').imageOffer]",
-                    "sku": "[parameters('vmConfig').imageSKU]",
-                    "version": "latest"
-                  },
-                  "osDisk": {
-                    "osType": "Linux",
-                    "caching": "[parameters('vmConfig').osManagedDiskCache]",
-                    "name": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-os')]",
-                    "createOption": "FromImage",
-                    "managedDisk": {
-                      "storageAccountType": "[parameters('vmConfig').osManagedDiskType]"
-                    }
-                  }
-                },
-                "networkProfile": {
-                    "networkInterfaces": [
-                        {
-                            "properties": {
-                                "primary": true
-                            },
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nic0'))]"
-                        },
-                        {
-                            "properties": {
-                                "primary": false
-                            },
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nic1'))]"
-                        }
-                    ]
-                }
-            }
+          ],
+          "enableIPForwarding": true
         }
+      },
+      {
+        "apiVersion": "[variables('networkApiVersion')]",
+        "type": "Microsoft.Network/networkInterfaces",
+        "name": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nic1')]",
+        "location": "[variables('location')]",
+        "dependsOn": [  ],
+        "properties": {
+          "ipConfigurations": [
+            { "name": "ipconfig1",
+              "properties": {
+                "privateIPAllocationMethod": "Static",
+                "privateIPAddress": "[string(take(split(replace(reference(variables('subnetIntId'), providers('Microsoft.Network', 'virtualNetworks').apiVersions[0]).addressPrefix, '0/', '4/'), '/'), 1)[0])]",
+                "subnet": {
+                  "id": "[variables('subnetIntId')]"
+                }
+              }
+            }
+          ],
+          "enableIPForwarding": true
+        }
+      },
+      {
+        "apiVersion": "[parameters('vmConfig').computeApiVersion]",
+        "type": "Microsoft.Compute/virtualMachines",
+        "name": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName)]",
+        "location": "[variables('location')]",
+        "tags": "[parameters('vmConfig').tags]",
+        "dependsOn": [
+          "[resourceId('Microsoft.Network/networkInterfaces/', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nic0'))]",
+          "[resourceId('Microsoft.Network/networkInterfaces/', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nic1'))]"
+        ],
+        "properties": {
+          "hardwareProfile": {
+          "vmSize": "[parameters('vmConfig').vmSize]"
+          },
+          "osProfile": {
+            "computerName": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName)]",
+            "adminUsername": "[parameters('vmConfig').adminUsername]",
+            "linuxConfiguration": {
+              "disablePasswordAuthentication": "true",
+              "ssh": {
+                "publicKeys": [
+                  {
+                    "path": "[concat('/home/', parameters('vmConfig').adminUsername, '/.ssh/authorized_keys')]",
+                    "keyData": "[parameters('vmConfig').sshPublicKey]"
+                  }
+                ]
+              }
+            }
+          },
+          "storageProfile": {
+            "imageReference": {
+              "publisher": "[parameters('vmConfig').imagePublisher]",
+              "offer": "[parameters('vmConfig').imageOffer]",
+              "sku": "[parameters('vmConfig').imageSKU]",
+              "version": "latest"
+            },
+            "osDisk": {
+              "osType": "Linux",
+              "caching": "[parameters('vmConfig').osManagedDiskCache]",
+              "name": "[concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-os')]",
+              "createOption": "FromImage",
+              "managedDisk": {
+                "storageAccountType": "[parameters('vmConfig').osManagedDiskType]"
+              }
+            }
+          },
+          "networkProfile": {
+            "networkInterfaces": [
+              { "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nic0'))]",
+                "properties": {
+                  "primary": true
+                }
+              },
+              { "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nic1'))]",
+                "properties": {
+                  "primary": false
+                }
+              }
+            ]
+          }
+        }
+      }
     ],
     "outputs": {
-        "hostname": {
-            "type": "string",
-            "value": "[reference(variables('publicIPAddressName')).dnsSettings.fqdn]"
-        }
+      "hostname": {
+        "type": "string",
+        "value": "[reference(variables('publicIPAddressName')).dnsSettings.fqdn]"
+      }
     }
 }
