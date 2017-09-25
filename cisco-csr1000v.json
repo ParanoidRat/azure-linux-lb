@@ -121,7 +121,7 @@
         ],
         "properties": {
           "networkSecurityGroup": {
-            "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, 'nsg'))]"
+            "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(parameters('vmNamespace'), '-', parameters('vmConfig').vmName, '-nsg'))]"
           },
           "ipConfigurations": [
             { "name": "ipconfig1",
