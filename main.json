@@ -177,10 +177,12 @@
             "value": "[parameters('templateBaseUrl')]"
           },
           "secConfig": {
-            "networkApiVersion": "[variables('networkApiVersion')]",
-            "secNamespace": "[parameters('vmNamespace')]",
-            "secCount": "[parameters('vmCount')]",
-            "secRules": "[parameters('netConfig').networkSecurityRules]"
+            "value": {
+              "networkApiVersion": "[variables('networkApiVersion')]",
+              "secNamespace": "[parameters('vmNamespace')]",
+              "secCount": "[parameters('vmCount')]",
+              "secRules": "[parameters('netConfig').networkSecurityRules]"
+            }
           }
         }
       }
