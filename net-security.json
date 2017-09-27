@@ -1,0 +1,54 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "templateBaseUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Base uri for nested templates"
+      }
+    },
+    "secConfig": {
+      "type": "object",
+      "metadata": {
+        "description": "Structure with config for NSGs"
+      }
+    }
+  },
+  "variables": {
+  },
+  "resources": [
+    {
+      "apiVersion": "[parameters('secConfig').networkApiVersion]",
+      "copy": {
+        "name": "[concat(parameters('secConfig').secNamespace, '-loop-nsg')]",
+        "count": "[parameters('secConfig').secCount]"
+      },
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[concat(parameters('secConfig').secNamespace, copyIndex(), '-nsg')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "copy": [{
+          "name": "securityRules",
+          "count": "[length(parameters('secConfig').secRules)]",
+          "input": {
+            "name": "[concat(parameters('secConfig').secRules[copyIndex('securityRules')].ruleName)]",
+            "properties": {
+              "description": "[concat(parameters('secConfig').secRules[copyIndex('securityRules')].ruleDescription)]",
+              "protocol": "[concat(parameters('secConfig').secRules[copyIndex('securityRules')].ruleProtocol)]",
+              "sourcePortRange": "[concat(parameters('secConfig').secRules[copyIndex('securityRules')].ruleSourcePortRange)]",
+              "destinationPortRange": "[concat(parameters('secConfig').secRules[copyIndex('securityRules')].ruleDestinationPortRange)]",
+              "sourceAddressPrefix": "[concat(parameters('secConfig').secRules[copyIndex('securityRules')].ruleSourceAddressPrefix)]",
+              "destinationAddressPrefix": "[concat(parameters('secConfig').secRules[copyIndex('securityRules')].ruleDestinationAddressPrefix)]",
+              "access": "Allow",
+              "priority": "[mul(copyIndex('securityRules', 1), 100)]",
+              "direction": "Inbound"
+            }
+          }
+        }]
+      }
+    }
+  ],
+  "outputs": {
+  }
+}

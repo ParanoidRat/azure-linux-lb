@@ -46,6 +46,7 @@
       "Disabled": "[concat(parameters('templateBaseUrl'), '/vm-datadisks-disabled.json')]"
     },
     "templateVmUrl": "[variables('configHashVm')[parameters('vmConfig').dataManagedDiskEnabledOrDisabled]]",
+    "templateNsgUrl": "[concat(parameters('templateBaseUrl'), '/net-security.json')]",
     "clusterName": "[concat(parameters('vmNamespace'), '-cluster')]",
     "availabilitySetName":"[concat(parameters('vmNamespace'), '-avs')]",
     "publicIPAddressName": "[concat(parameters('vmNamespace'), '-ip')]",
@@ -160,33 +161,28 @@
       }
     },
     {
+      "name": "[concat(parameters('vmNamespace'), '-nested-nsg')]",
+      "type": "Microsoft.Resources/deployments",
       "apiVersion": "[variables('networkApiVersion')]",
-      "copy": {
-        "name": "[concat(parameters('vmNamespace'), '-loop-nsg')]",
-        "count": "[parameters('vmCount')]"
-      },
-      "type": "Microsoft.Network/networkSecurityGroups",
-      "name": "[concat(parameters('vmNamespace'), copyIndex(), '-nsg')]",
-      "location": "[variables('location')]",
+      "dependsOn": [
+      ],
       "properties": {
-        "copy": [{
-          "name": "securityRules",
-          "count": "[length(parameters('netConfig').sshAllowedFrom)]",
-          "input": {
-            "name": "[concat('SSH-HOST0', copyIndex('securityRules', 1))]",
-            "properties": {
-              "description": "Allows inbound SSH from specific host",
-              "protocol": "Tcp",
-              "sourcePortRange": "*",
-              "destinationPortRange": "[parameters('vmConfig').sshPort]",
-              "sourceAddressPrefix": "[parameters('netConfig').sshAllowedFrom[copyIndex('securityRules')]]",
-              "destinationAddressPrefix": "*",
-              "access": "Allow",
-              "priority": "[mul(copyIndex('securityRules', 1), 100)]",
-              "direction": "Inbound"
-            }
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('templateNsgUrl')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "templateBaseUrl": {
+            "value": "[parameters('templateBaseUrl')]"
+          },
+          "secConfig": {
+            "networkApiVersion": "[variables('networkApiVersion')]",
+            "secNamespace": "[concat(parameters('vmNamespace')]",
+            "secCount": "[parameters('vmCount')]",
+            "secRules": "[parameters('netConfig').networkSecurityRules]"
           }
-        }]
+        }
       }
     },
     {
@@ -238,7 +234,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[variables('templateVmURL')]",
+          "uri": "[variables('templateVmUrl')]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
