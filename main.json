@@ -195,6 +195,7 @@
       "name": "[concat(parameters('vmNamespace'), copyIndex(), '-nic')]",
       "location": "[variables('location')]",
       "dependsOn": [
+        "[concat(parameters('vmNamespace'), '-nested-nsg')]",
         "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]",
         "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'), '/inboundNatRules/', 'SSH-NAT0', copyIndex())]"
       ],
