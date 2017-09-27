@@ -178,7 +178,7 @@
           },
           "secConfig": {
             "networkApiVersion": "[variables('networkApiVersion')]",
-            "secNamespace": "[concat(parameters('vmNamespace')]",
+            "secNamespace": "[parameters('vmNamespace')]",
             "secCount": "[parameters('vmCount')]",
             "secRules": "[parameters('netConfig').networkSecurityRules]"
           }
