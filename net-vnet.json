@@ -1,0 +1,47 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "templateBaseUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Base uri for nested templates"
+      }
+    },
+    "netConfig": {
+      "type": "object",
+      "metadata": {
+        "description": "Structure with config for net"
+      }
+    }
+  },
+  "variables": {
+  },
+  "resources": [
+    {
+      "apiVersion": "[parameters('netConfig').networkApiVersion]",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[parameters('netConfig').vNetName]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[parameters('netConfig').vNetAddressPrefix]"
+          ]
+        },
+        "copy": [{
+          "name": "subnets",
+          "count": "[length(parameters('netConfig').vNetSubnets)]",
+          "input": {
+            "name": "[parameters('netConfig').vNetSubnets[copyIndex('subnets')].name]",
+            "properties": {
+              "addressPrefix": "[parameters('netConfig').vNetSubnets[copyIndex('subnets')].prefix]"
+            }
+          }
+        }]
+      }
+    }
+  ],
+  "outputs": {
+  }
+}
