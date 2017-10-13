@@ -201,9 +201,7 @@
                 { "id": "[concat(variables('loadBalancerId'), '/backendAddressPools/', variables('bePoolName'))]" }
               ],
               "loadBalancerInboundNatRules": [
-                {
-                  "id": "[concat(variables('loadBalancerId'), '/inboundNatRules/', 'SSH-NAT0', copyIndex())]"
-                }
+                { "id": "[concat(variables('loadBalancerId'), '/inboundNatRules/', 'SSH-NAT0', copyIndex())]" }
               ]
             }
           }
