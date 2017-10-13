@@ -76,7 +76,9 @@
           "templateBaseUrl": {
             "value": "[parameters('templateBaseUrl')]"
           },
-          "netConfig": "[parameters('netConfig')]"
+          "netConfig": {
+            "value": "[parameters('netConfig')]"
+          }
         }
       }
     },
