@@ -53,7 +53,6 @@
     "clusterName": "[concat(parameters('vmNamespace'), '-cluster')]",
     "availabilitySetName":"[concat(parameters('vmNamespace'), '-avs')]",
     "publicIPAddressName": "[concat(parameters('vmNamespace'), '-ip')]",
-    "virtualNetworkName": "[parameters('netConfig').vNetName]",
     "subnetExtIndex": 0,
     "subnetIntIndex": 1,
     "loadBalancerName": "[concat(parameters('vmNamespace'), '-lb')]",
@@ -88,7 +87,7 @@
       "location": "[variables('location')]",
       "dependsOn": [
         "[concat(parameters('vmNamespace'), '-deployment-nsg')]",
-        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
+        "[concat(parameters('vmNamespace'), '-deployment-vnet')]"
       ],
       "properties": {
         "publicIPAllocationMethod": "[parameters('netConfig').publicIPAddressType]",
