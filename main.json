@@ -54,13 +54,8 @@
     "availabilitySetName":"[concat(parameters('vmNamespace'), '-avs')]",
     "publicIPAddressName": "[concat(parameters('vmNamespace'), '-ip')]",
     "virtualNetworkName": "[parameters('netConfig').vNetName]",
-    "virtualNetworkId": "[reference(concat(parameters('vmNamespace'), '-deployment-vnet')).outputs.vNetId.value]",
     "subnetExtIndex": 0,
     "subnetIntIndex": 1,
-    "subnetExtName":"[parameters('netConfig').vNetSubnets[variables('subnetExtIndex')].name]",
-    "subnetIntName":"[parameters('netConfig').vNetSubnets[variables('subnetIntIndex')].name]",
-    "subnetExtId": "[concat(variables('virtualNetworkId'), '/subnets/', variables('subnetExtName'))]",
-    "subnetIntId": "[concat(variables('virtualNetworkId'), '/subnets/', variables('subnetIntName'))]",
     "loadBalancerName": "[concat(parameters('vmNamespace'), '-lb')]",
     "loadBalancerId": "[resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName'))]",
     "fePoolName": "[concat(parameters('vmNamespace'), '-pool-front')]",
@@ -199,7 +194,7 @@
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
-                "id": "[variables('subnetIntId')]"
+                "id": "[concat(reference(concat(parameters('vmNamespace'), '-deployment-vnet')).outputs.vNetId.value, '/subnets/', parameters('netConfig').vNetSubnets[variables('subnetIntIndex')].name)]"
               },
               "loadBalancerBackendAddressPools": [
                 { "id": "[concat(variables('loadBalancerId'), '/backendAddressPools/', variables('bePoolName'))]" }
