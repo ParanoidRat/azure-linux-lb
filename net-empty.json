@@ -20,5 +20,9 @@
   "resources": [
   ],
   "outputs": {
+    "vNetId": {
+      "type": "string",
+      "value": "[resourceId(parameters('netConfig').vNetRGName, 'Microsoft.Network/virtualNetworks', parameters('netConfig').vNetName)]"
+    }
   }
 }
