@@ -191,7 +191,7 @@
         "enableFloatingIP": false,
         "idleTimeoutInMinutes": "[parameters('netConfig').lbServices[copyIndex()].svcInterval]",
         "probe": {
-          "id": "[concat(variables('loadBalancerName'), '/', 'LB-PROBE-', parameters('netConfig').lbServices[copyIndex()].svcName)]"
+          "id": "[concat(variables('loadBalancerId'), '/probes/', 'LB-PROBE-', parameters('netConfig').lbServices[copyIndex()].svcName)]"
         }
       }
     },
