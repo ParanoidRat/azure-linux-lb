@@ -131,7 +131,7 @@
         "count": "[parameters('vmCount')]"
       },
       "type": "Microsoft.Network/loadBalancers/inboundNatRules",
-      "name": "[concat(variables('loadBalancerName'), '/', 'SSH-NAT0', copyIndex())]",
+      "name": "[concat(variables('loadBalancerName'), '/', 'NAT-SSH0', copyIndex())]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
         "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]"
@@ -163,6 +163,36 @@
         "port": "[parameters('netConfig').lbServices[copyIndex()].svcPort]",
         "intervalInSeconds": 5,
         "numberOfProbes": 2
+      }
+    },
+    {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "copy": {
+        "name": "[concat(parameters('vmNamespace'), '-loop-lb-rules')]",
+        "count": "[length(parameters('netConfig').lbServices)]"
+      },
+      "type": "Microsoft.Network/loadBalancers/loadBalancingRules",
+      "name": "[concat(variables('loadBalancerName'), '/', 'RULE-',parameters('netConfig').lbServices[copyIndex()].svcName)]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]",
+        "[concat(variables('loadBalancerId'), '/probes/', parameters('netConfig').lbServices[copyIndex()].svcName)]"
+      ],
+      "properties": {
+        "frontendIPConfiguration": {
+          "id": "[concat(variables('loadBalancerId'),'/frontendIPConfigurations/', variables('fePoolName'))]"
+        },
+        "backendAddressPool": {
+          "id": "[concat(variables('loadBalancerId'), '/backendAddressPools/', variables('bePoolName'))]"
+        },
+        "protocol": "[parameters('netConfig').lbServices[copyIndex()].svcProtocol]",
+        "frontendPort": "[parameters('netConfig').lbServices[copyIndex()].svcPort]",
+        "backendPort": "[parameters('netConfig').lbServices[copyIndex()].svcPort]",
+        "enableFloatingIP": false,
+        "idleTimeoutInMinutes": "[parameters('netConfig').lbServices[copyIndex()].svcInterval]",
+        "probe": {
+          "id": "[concat(variables('loadBalancerId'), '/probes/', 'PRB-', parameters('netConfig').lbServices[copyIndex()].svcName)]"
+        }
       }
     },
     {
@@ -202,7 +232,7 @@
       "dependsOn": [
         "[concat(parameters('vmNamespace'), '-deployment-nsg')]",
         "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]",
-        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'), '/inboundNatRules/', 'SSH-NAT0', copyIndex())]"
+        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'), '/inboundNatRules/', 'NAT-SSH00')]"
       ],
       "properties": {
         "networkSecurityGroup": {
@@ -220,7 +250,7 @@
                 { "id": "[concat(variables('loadBalancerId'), '/backendAddressPools/', variables('bePoolName'))]" }
               ],
               "loadBalancerInboundNatRules": [
-                { "id": "[concat(variables('loadBalancerId'), '/inboundNatRules/', 'SSH-NAT0', copyIndex())]" }
+                { "id": "[concat(variables('loadBalancerId'), '/inboundNatRules/', 'NAT-SSH0', copyIndex())]" }
               ]
             }
           }
