@@ -147,6 +147,32 @@
       }
     },
     {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "copy": {
+        "name": "[concat(parameters('vmNamespace'), '-loop-lb-rules')]",
+        "count": "[length(parameters('netConfig').lbServices)]"
+      },
+      "type": "Microsoft.Network/loadBalancers/loadBalancingRules",
+      "name": "[concat(variables('loadBalancerName'), '/', 'LB-RULE-', parameters('netConfig').lbServices[copyIndex()].svcName)]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]"
+      ],
+      "properties": {
+        "frontendIPConfiguration": {
+          "id": "[concat(variables('loadBalancerId'),'/frontendIPConfigurations/', variables('fePoolName'))]"
+        },
+        "backendAddressPool": {
+          "id": "[concat(variables('loadBalancerId'), '/backendAddressPools/', variables('bePoolName'))]"
+        },
+        "protocol": "[parameters('netConfig').lbServices[copyIndex()].svcProtocol]",
+        "frontendPort": "[parameters('netConfig').lbServices[copyIndex()].svcPort]",
+        "backendPort": "[parameters('netConfig').lbServices[copyIndex()].svcPort]",
+        "enableFloatingIP": false,
+        "idleTimeoutInMinutes": "[parameters('netConfig').lbServices[copyIndex()].svcInterval]"
+      }
+    },
+    {
       "name": "[concat(parameters('vmNamespace'), '-deployment-nsg')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "[variables('networkApiVersion')]",
