@@ -153,7 +153,7 @@
         "count": "[length(parameters('netConfig').lbServices)]"
       },
       "type": "Microsoft.Network/loadBalancers/probes",
-      "name": "[concat(variables('loadBalancerName'), '/probes/', parameters('netConfig').lbServices[copyIndex()].svcName)]",
+      "name": "[concat(variables('loadBalancerName'), '/', 'PRB-', parameters('netConfig').lbServices[copyIndex()].svcName)]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
         "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]"
