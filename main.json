@@ -149,6 +149,25 @@
     {
       "apiVersion": "[variables('networkApiVersion')]",
       "copy": {
+        "name": "[concat(parameters('vmNamespace'), '-loop-lb-probes')]",
+        "count": "[length(parameters('netConfig').lbServices)]"
+      },
+      "type": "Microsoft.Network/loadBalancers/probes",
+      "name": "[concat(variables('loadBalancerName'), '/', 'LB-PROBE-', parameters('netConfig').lbServices[copyIndex()].svcName)]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]"
+      ],
+      "properties": {
+        "protocol": "[parameters('netConfig').lbServices[copyIndex()].svcProtocol]",
+        "port": "[parameters('netConfig').lbServices[copyIndex()].svcPort]",
+        "intervalInSeconds": 5,
+        "numberOfProbes": 2
+      }
+    },
+    {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "copy": {
         "name": "[concat(parameters('vmNamespace'), '-loop-lb-rules')]",
         "count": "[length(parameters('netConfig').lbServices)]"
       },
@@ -156,7 +175,8 @@
       "name": "[concat(variables('loadBalancerName'), '/', 'LB-RULE-', parameters('netConfig').lbServices[copyIndex()].svcName)]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
-        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]"
+        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]",
+        "[concat(variables('loadBalancerName'), '/', 'LB-PROBE-', parameters('netConfig').lbServices[copyIndex()].svcName)]"
       ],
       "properties": {
         "frontendIPConfiguration": {
@@ -169,7 +189,10 @@
         "frontendPort": "[parameters('netConfig').lbServices[copyIndex()].svcPort]",
         "backendPort": "[parameters('netConfig').lbServices[copyIndex()].svcPort]",
         "enableFloatingIP": false,
-        "idleTimeoutInMinutes": "[parameters('netConfig').lbServices[copyIndex()].svcInterval]"
+        "idleTimeoutInMinutes": "[parameters('netConfig').lbServices[copyIndex()].svcInterval]",
+        "probe": {
+          "id": "[concat(variables('loadBalancerName'), '/', 'LB-PROBE-', parameters('netConfig').lbServices[copyIndex()].svcName)]"
+        }
       }
     },
     {
