@@ -122,42 +122,8 @@
             "name": "[variables('bePoolName')]"
           }
         ],
-        "copy": [{
-          "name": "probes",
-          "count": "[length(parameters('netConfig').lbServices)]",
-          "input": {
-            "name": "[concat('PRB-', parameters('netConfig').lbServices[copyIndex('probes')].svcName)]",
-            "properties": {
-              "protocol": "[parameters('netConfig').lbServices[copyIndex('probes')].svcProtocol]",
-              "port": "[parameters('netConfig').lbServices[copyIndex('probes')].svcPort]",
-              "intervalInSeconds": 5,
-              "numberOfProbes": 2
-            }
-          }
-        }],
-        "copy": [{
-          "name": "loadBalancingRules",
-          "count": "[length(parameters('netConfig').lbServices)]",
-          "input": {
-            "name": "[concat('RUL-', parameters('netConfig').lbServices[copyIndex('loadBalancingRules')].svcName)]",
-            "properties": {
-              "frontendIPConfiguration": {
-                "id": "[concat(variables('loadBalancerId'),'/frontendIPConfigurations/', variables('fePoolName'))]"
-              },
-              "backendAddressPool": {
-                "id": "[concat(variables('loadBalancerId'), '/backendAddressPools/', variables('bePoolName'))]"
-              },
-              "protocol": "[parameters('netConfig').lbServices[copyIndex('loadBalancingRules')].svcProtocol]",
-              "frontendPort": "[parameters('netConfig').lbServices[copyIndex('loadBalancingRules')].svcPort]",
-              "backendPort": "[parameters('netConfig').lbServices[copyIndex('loadBalancingRules')].svcPort]",
-              "enableFloatingIP": false,
-              "idleTimeoutInMinutes": "[parameters('netConfig').lbServices[copyIndex('loadBalancingRules')].svcInterval]",
-              "probe": {
-                "id": "[concat(variables('loadBalancerId'), '/probes/', 'PRB-', parameters('netConfig').lbServices[copyIndex('loadBalancingRules')].svcName)]"
-              }
-            }
-          }
-        }]
+        "probes": "[parameters('netConfig').lbProbes]",
+        "loadBalancingRules": "[parameters('netConfig').lbRules]"
       }
     },
     {
