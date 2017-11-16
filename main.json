@@ -203,8 +203,7 @@
         "[concat(parameters('vmNamespace'), '-deployment-nsg')]",
         "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]",
         "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'), '/inboundNatRules/', 'NAT-SSH00')]",
-        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'), '/probes/', 'PRB-', parameters('netConfig').lbServices[0].svcName)]",
-        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'), '/loadBalancingRules/', 'RUL-', parameters('netConfig').lbServices[0].svcName)]"
+        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'), '/probes/', 'PRB-', parameters('netConfig').lbServices[0].svcName)]"
       ],
       "properties": {
         "networkSecurityGroup": {
