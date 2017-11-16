@@ -130,7 +130,7 @@
             "name": "[parameters('netConfig').lbRules[copyIndex('loadBalancingRules')].name]",
             "properties": {
               "frontendIPConfiguration": {
-                "id": "[concat(variables('loadBalancerId'),'/frontendIPConfigurations/', variables('fePoolName'))]"
+                "id": "[concat(variables('loadBalancerId'), '/frontendIPConfigurations/', variables('fePoolName'))]"
               },
               "backendAddressPool": {
                 "id": "[concat(variables('loadBalancerId'), '/backendAddressPools/', variables('bePoolName'))]"
