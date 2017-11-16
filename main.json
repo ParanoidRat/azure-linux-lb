@@ -172,11 +172,11 @@
         "count": "[length(parameters('netConfig').lbServices)]"
       },
       "type": "Microsoft.Network/loadBalancers/loadBalancingRules",
-      "name": "[concat(variables('loadBalancerName'), '/', 'RULE-',parameters('netConfig').lbServices[copyIndex()].svcName)]",
+      "name": "[concat(variables('loadBalancerName'), '/', 'RUL-', parameters('netConfig').lbServices[copyIndex()].svcName)]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
         "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]",
-        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'), '/probes/', 'PRB-', parameters('netConfig').lbServices[copyIndex()].svcName))]"
+        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'), '/probes/', 'PRB-', parameters('netConfig').lbServices[copyIndex()].svcName)]"
       ],
       "properties": {
         "frontendIPConfiguration": {
