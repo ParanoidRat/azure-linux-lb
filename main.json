@@ -121,20 +121,7 @@
           {
             "name": "[variables('bePoolName')]"
           }
-        ],
-        "copy": [{
-          "name": "probes",
-          "count": "[length(parameters('netConfig').lbServices)]",
-          "input": {
-            "name": "[concat('PROBE-0', copyIndex('probes'))]",
-            "properties": {
-              "protocol": "[parameters('netConfig').lbServices[copyIndex('probes')].svcProtocol]",
-              "port": "[parameters('netConfig').lbServices[copyIndex('probes')].svcPort]",
-              "intervalInSeconds": 5,
-              "numberOfProbes": 2
-            }
-          }
-        }]
+        ]
       }
     },
     {
@@ -157,6 +144,25 @@
         "frontendPort": "[copyIndex(variables('natStartPort'))]",
         "backendPort": "22",
         "enableFloatingIP": false
+      }
+    },
+    {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "copy": {
+        "name": "[concat(parameters('vmNamespace'), '-loop-lb-probes')]",
+        "count": "[length(parameters('netConfig').lbServices)]"
+      },
+      "type": "Microsoft.Network/loadBalancers/probes",
+      "name": "[concat(variables('loadBalancerName'), '/', 'PRB-', parameters('netConfig').lbServices[copyIndex()].svcName)]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]"
+      ],
+      "properties": {
+        "protocol": "[parameters('netConfig').lbServices[copyIndex()].svcProtocol]",
+        "port": "[parameters('netConfig').lbServices[copyIndex()].svcPort]",
+        "intervalInSeconds": 5,
+        "numberOfProbes": 2
       }
     },
     {
@@ -196,7 +202,9 @@
       "dependsOn": [
         "[concat(parameters('vmNamespace'), '-deployment-nsg')]",
         "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]",
-        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'), '/inboundNatRules/', 'NAT-SSH00')]"
+        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'), '/inboundNatRules/', 'NAT-SSH00')]",
+        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'), '/probes/', 'PRB-', parameters('netConfig').lbServices[0].svcName)]",
+        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'), '/loadBalancingRules/', 'RUL-', parameters('netConfig').lbServices[0].svcName)]"
       ],
       "properties": {
         "networkSecurityGroup": {
