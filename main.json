@@ -136,7 +136,7 @@
                 "id": "[concat(variables('loadBalancerId'), '/backendAddressPools/', variables('bePoolName'))]"
               },
               "probe": {
-                "id": "[concat(variables('loadBalancerId'), '/probes/', parameters('netConfig').lbProbes[copyIndex('loadBalancingRules')].name )]"
+                "id": "[concat(variables('loadBalancerId'), '/probes/', parameters('netConfig').lbRules[copyIndex('loadBalancingRules')].probe )]"
               },
               "protocol": "[parameters('netConfig').lbRules[copyIndex('loadBalancingRules')].protocol]",
               "frontendPort": "[parameters('netConfig').lbRules[copyIndex('loadBalancingRules')].frontendPort]",
