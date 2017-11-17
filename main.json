@@ -123,7 +123,29 @@
           }
         ],
         "probes": "[parameters('netConfig').lbProbes]",
-        "loadBalancingRules": "[parameters('netConfig').lbRules]"
+        "loadBalancingRules":[{
+          "name": "loadBalancingRules",
+          "count": "[length(parameters('netConfig').lbRules)]",
+          "input": {
+            "name": "[parameters('netConfig').lbRules[copyIndex('loadBalancingRules')].name]",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('loadBalancerId'), '/frontendIPConfigurations/', variables('fePoolName'))]"
+              },
+              "backendAddressPool": {
+                "id": "[concat(variables('loadBalancerId'), '/backendAddressPools/', variables('bePoolName'))]"
+              },
+              "probe": {
+                "id": "[concat(variables('loadBalancerId'), '/probes/', parameters('netConfig').lbProbes[copyIndex('loadBalancingRules')].name )]"
+              },
+              "protocol": "[parameters('netConfig').lbRules[copyIndex('loadBalancingRules')].protocol]",
+              "frontendPort": "[parameters('netConfig').lbRules[copyIndex('loadBalancingRules')].frontendPort]",
+              "backendPort": "[parameters('netConfig').lbRules[copyIndex('loadBalancingRules')].backendPort]",
+              "enableFloatingIP": false,
+              "idleTimeoutInMinutes": "[parameters('netConfig').lbRules[copyIndex('loadBalancingRules')].idleTimeoutInMinutes]"
+            }
+          }
+        }]
       }
     },
     {
