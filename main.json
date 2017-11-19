@@ -235,9 +235,9 @@
       "location": "[variables('location')]",
       "dependsOn": [
         "[concat(parameters('vmNamespace'), '-deployment-nsg')]",
+        "[concat(parameters('vmNamespace'), '-loop-lb-nat-ssh')]",
         "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerNameInt'))]",
-        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerNameExt'))]",
-        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerNameExt'), '/inboundNatRules/', 'NAT-SSH00')]"
+        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerNameExt'))]"
       ],
       "properties": {
         "networkSecurityGroup": {
@@ -282,7 +282,7 @@
       "apiVersion": "[variables('networkApiVersion')]",
       "dependsOn": [
         "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetName'))]",
-        "[concat('Microsoft.Network/networkInterfaces/', parameters('vmNamespace'), '0-nic')]"
+        "[concat(parameters('vmNamespace'), '-loop-nic')]"
       ],
       "properties": {
         "mode": "Incremental",
