@@ -1,0 +1,70 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "templateBaseUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Base uri for nested templates"
+      }
+    },
+    "vmNamespace": {
+      "type": "string",
+      "metadata": {
+        "description": "Unique namespace for cluster"
+      }
+    },
+    "vmCount": {
+      "type": "int",
+      "metadata": {
+        "description": "Number of VMs in cluster"
+      }
+    },
+    "netConfig": {
+      "type": "object",
+      "metadata": {
+        "description": "Structure with config for vNet"
+      }
+    }
+  },
+  "variables": {
+    "networkApiVersion": "[parameters('netConfig').networkApiVersion]",
+    "location": "[resourceGroup().location]"
+  },
+  "resources": [
+    {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "copy": {
+        "name": "[concat(parameters('vmNamespace'), '-loop-nic')]",
+        "count": "[parameters('vmCount')]"
+      },
+      "name": "[concat(parameters('vmNamespace'), copyIndex(), '-nic')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+      ],
+      "properties": {
+        "networkSecurityGroup": {
+         "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(parameters('vmNamespace'), copyIndex(), '-nsg'))]"
+        },
+        "ipConfigurations": [
+          {
+            "name": "[concat(parameters('vmNamespace'), copyIndex(), '-ipcfg')]",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[concat(reference(concat(parameters('vmNamespace'), '-deployment-vnet')).outputs.vNetId.value, '/subnets/', parameters('netConfig').vNetSubnets[variables('subnetIntIndex')].name)]"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "clusterFQDN": {
+      "value": "",
+      "type": "string"
+    }
+  }
+}

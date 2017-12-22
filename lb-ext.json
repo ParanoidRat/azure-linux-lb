@@ -1,0 +1,169 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "templateBaseUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Base uri for nested templates"
+      }
+    },
+    "vmNamespace": {
+      "type": "string",
+      "metadata": {
+        "description": "Unique namespace for cluster"
+      }
+    },
+    "vmCount": {
+      "type": "int",
+      "metadata": {
+        "description": "Number of VMs in cluster"
+      }
+    },
+    "netConfig": {
+      "type": "object",
+      "metadata": {
+        "description": "Structure with config for vNet"
+      }
+    }
+  },
+  "variables": {
+    "networkApiVersion": "[parameters('netConfig').networkApiVersion]",
+    "location": "[resourceGroup().location]",
+    "clusterName": "[concat(parameters('vmNamespace'), '-cluster')]",
+    "publicIPAddressName": "[concat(parameters('vmNamespace'), '-ip')]",
+    "subnetIntIndex": "[parameters('netConfig').subnetLbIntIndex]",
+    "loadBalancerNameExt": "[concat(parameters('vmNamespace'), '-lb-ext')]",
+    "loadBalancerIdExt": "[resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerNameExt'))]",
+    "fePoolNameExt": "[concat(parameters('vmNamespace'), '-pool-front-ext')]",
+    "bePoolName": "[concat(parameters('vmNamespace'), '-pool-back')]",
+    "natStartPort": 22000
+  },
+  "resources": [
+    {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[variables('publicIPAddressName')]",
+      "location": "[variables('location')]",
+      "properties": {
+        "publicIPAllocationMethod": "[parameters('netConfig').publicIPAddressType]",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('clusterName')]"
+        }
+      }
+    },
+    {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "type": "Microsoft.Network/loadBalancers",
+      "name": "[variables('loadBalancerNameExt')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]"
+      ],
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "name": "[variables('fePoolNameExt')]",
+            "properties": {
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
+              }
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "[variables('bePoolName')]"
+          }
+        ],
+        "probes": "[parameters('netConfig').lbProbes]",
+        "copy":[{
+          "name": "loadBalancingRules",
+          "count": "[length(parameters('netConfig').lbRules)]",
+          "input": {
+            "name": "[parameters('netConfig').lbRules[copyIndex('loadBalancingRules')].name]",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('loadBalancerIdExt'),'/frontendIPConfigurations/', variables('fePoolNameExt'))]"
+              },
+              "backendAddressPool": {
+                "id": "[concat(variables('loadBalancerIdExt'), '/backendAddressPools/', variables('bePoolName'))]"
+              },
+              "probe": {
+                "id": "[concat(variables('loadBalancerIdExt'), '/probes/', parameters('netConfig').lbRules[copyIndex('loadBalancingRules')].probe )]"
+              },
+              "protocol": "[parameters('netConfig').lbRules[copyIndex('loadBalancingRules')].protocol]",
+              "frontendPort": "[parameters('netConfig').lbRules[copyIndex('loadBalancingRules')].frontendPort]",
+              "backendPort": "[parameters('netConfig').lbRules[copyIndex('loadBalancingRules')].backendPort]",
+              "enableFloatingIP": false,
+              "idleTimeoutInMinutes": "[parameters('netConfig').lbRules[copyIndex('loadBalancingRules')].idleTimeoutInMinutes]"
+            }
+          }
+        }]
+      }
+    },
+    {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "copy": {
+        "name": "[concat(parameters('vmNamespace'), '-loop-lb-nat-ssh')]",
+        "count": "[parameters('vmCount')]"
+      },
+      "type": "Microsoft.Network/loadBalancers/inboundNatRules",
+      "name": "[concat(variables('loadBalancerNameExt'), '/', 'NAT-SSH0', copyIndex())]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerNameExt'))]"
+      ],
+      "properties": {
+        "frontendIPConfiguration": {
+          "id": "[concat(variables('loadBalancerIdExt'),'/frontendIPConfigurations/', variables('fePoolNameExt'))]"
+        },
+        "protocol": "tcp",
+        "frontendPort": "[copyIndex(variables('natStartPort'))]",
+        "backendPort": "22",
+        "enableFloatingIP": false
+      }
+    },
+    {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "copy": {
+        "name": "[concat(parameters('vmNamespace'), '-loop-nic')]",
+        "count": "[parameters('vmCount')]"
+      },
+      "name": "[concat(parameters('vmNamespace'), copyIndex(), '-nic')]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerNameExt'))]"
+      ],
+      "properties": {
+        "networkSecurityGroup": {
+         "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(parameters('vmNamespace'), copyIndex(), '-nsg'))]"
+        },
+        "ipConfigurations": [
+          {
+            "name": "[concat(parameters('vmNamespace'), copyIndex(), '-ipcfg')]",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[concat(reference(concat(parameters('vmNamespace'), '-deployment-vnet')).outputs.vNetId.value, '/subnets/', parameters('netConfig').vNetSubnets[variables('subnetIntIndex')].name)]"
+              },
+              "loadBalancerBackendAddressPools": [
+                { "id": "[concat(variables('loadBalancerIdExt'), '/backendAddressPools/', variables('bePoolName'))]" }
+              ],
+              "loadBalancerInboundNatRules": [
+                { "id": "[concat(variables('loadBalancerIdExt'), '/inboundNatRules/', 'NAT-SSH0', copyIndex())]" }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "clusterFQDN": {
+      "value": "[concat(reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName')),providers('Microsoft.Network', 'publicIPAddresses').apiVersions[0]).dnsSettings.fqdn)]",
+      "type": "string"
+    }
+  }
+}
