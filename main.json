@@ -154,7 +154,7 @@
       "apiVersion": "[variables('networkApiVersion')]",
       "dependsOn": [
         "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetName'))]",
-        "[concat(parameters('vmNamespace'), '-loop-nic')]"
+        "[concat(parameters('vmNamespace'), '-deployment-lb')]"
       ],
       "properties": {
         "mode": "Incremental",
