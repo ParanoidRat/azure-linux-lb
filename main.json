@@ -76,9 +76,6 @@
           },
           "netConfig": {
             "value": "[parameters('netConfig')]"
-          },
-          "vNetId": {
-            "value": "[reference(concat(parameters('vmNamespace'), '-deployment-vnet')).outputs.vNetId.value]"
           }
         }
       }
@@ -108,6 +105,9 @@
           },
           "vmCount": {
             "value": "[parameters('vmCount')]"
+          },
+          "vNetId": {
+            "value": "[reference(concat(parameters('vmNamespace'), '-deployment-vnet')).outputs.vNetId.value]"
           }
         }
       }
