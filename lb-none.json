@@ -35,7 +35,8 @@
   },
   "variables": {
     "networkApiVersion": "[parameters('netConfig').networkApiVersion]",
-    "location": "[resourceGroup().location]"
+    "location": "[resourceGroup().location]",
+    "subnetIntIndex": "[parameters('netConfig').subnetLbIntIndex]"
   },
   "resources": [
     {
