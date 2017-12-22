@@ -25,6 +25,12 @@
       "metadata": {
         "description": "Structure with config for vNet"
       }
+    },
+    "vNetId": {
+      "type": "string",
+      "metadata": {
+        "description": "vNet reference for deployment"
+      }
     }
   },
   "variables": {
@@ -117,7 +123,7 @@
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
-                "id": "[concat(reference(concat(parameters('vmNamespace'), '-deployment-vnet')).outputs.vNetId.value, '/subnets/', parameters('netConfig').vNetSubnets[variables('subnetIntIndex')].name)]"
+                "id": "[concat(vNetId, '/subnets/', parameters('netConfig').vNetSubnets[variables('subnetIntIndex')].name)]"
               }
             }
           }
