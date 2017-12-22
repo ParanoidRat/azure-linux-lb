@@ -86,7 +86,7 @@
       "name": "[concat(parameters('vmNamespace'), '-deployment-lb')]",
       "dependsOn": [
         "[concat(parameters('vmNamespace'), '-deployment-nsg')]",
-        "[resourceId(parameters('netConfig').vNetRGName, 'Microsoft.Network/virtualNetworks', parameters('netConfig').vNetName)]"
+        "[concat(parameters('netConfig').vNetRGName, '/Microsoft.Network/virtualNetworks/', parameters('netConfig').vNetName)]"
       ],
       "properties": {
         "mode": "Incremental",
