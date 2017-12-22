@@ -152,7 +152,7 @@
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
-                "id": "[concat(vNetId, '/subnets/', parameters('netConfig').vNetSubnets[variables('subnetIntIndex')].name)]"
+                "id": "[concat(parameters('vNetId'), '/subnets/', parameters('netConfig').vNetSubnets[variables('subnetIntIndex')].name)]"
               },
               "loadBalancerBackendAddressPools": [
                 { "id": "[concat(variables('loadBalancerIdExt'), '/backendAddressPools/', variables('bePoolName'))]" }
