@@ -170,7 +170,8 @@
       "location": "[variables('location')]",
       "dependsOn": [
         "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerNameExt'))]",
-        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerNameInt'))]"
+        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerNameInt'))]",
+        "[concat(parameters('vmNamespace'), '-loop-lb-nat-ssh')]"
       ],
       "properties": {
         "networkSecurityGroup": {
