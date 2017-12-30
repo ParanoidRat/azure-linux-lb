@@ -27,6 +27,7 @@
       "type": "Microsoft.Network/networkSecurityGroups",
       "name": "[concat(parameters('secConfig').secNamespace, copyIndex(), '-nsg')]",
       "location": "[resourceGroup().location]",
+      "tags": "[parameters('secConfig').tags]",
       "properties": {
         "copy": [{
           "name": "securityRules",

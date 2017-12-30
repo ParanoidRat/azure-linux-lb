@@ -132,7 +132,8 @@
               "networkApiVersion": "[variables('networkApiVersion')]",
               "secNamespace": "[parameters('vmNamespace')]",
               "secCount": "[parameters('vmCount')]",
-              "secRules": "[parameters('netConfig').networkSecurityRules]"
+              "secRules": "[parameters('netConfig').networkSecurityRules]",
+              "tags": "[parameters('netConfig').tags]"
             }
           }
         }
@@ -143,6 +144,7 @@
       "name": "[variables('availabilitySetName')]",
       "apiVersion": "[variables('computeApiVersion')]",
       "location": "[resourceGroup().location]",
+      "tags": "[parameters('vmConfig').tags]",      
       "properties": {
         "PlatformUpdateDomainCount": "[variables('updateDomainCount')]",
         "PlatformFaultDomainCount": "[variables('faultDomainCount')]"

@@ -48,6 +48,7 @@
       },
       "name": "[concat(parameters('vmNamespace'), copyIndex(), '-nic')]",
       "location": "[variables('location')]",
+      "tags": "[parameters('netConfig').tags]",
       "dependsOn": [
       ],
       "properties": {
