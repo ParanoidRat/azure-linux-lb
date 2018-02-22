@@ -1,0 +1,176 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "templateBaseUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Base uri for nested templates"
+      }
+    },
+    "commonNamespace": {
+      "type": "string",
+      "metadata": {
+        "description": "Common namespace for deployed resources"
+      }
+    },
+    "netConfig": {
+      "type": "object",
+      "metadata": {
+        "description": "Structure with configuratin"
+      }
+    }
+  },
+  "variables": {
+    "networkApiVersion": "[parameters('netConfig').networkApiVersion]",
+    "subnetIndex": "[parameters('netConfig').subnetLbIntIndex]",
+    "secRules": "[parameters('netConfig').networkSecurityRules]",
+    "publicIPAddressName": "[concat(parameters('commonNamespace'), '-ip')]",
+    "nsgName": "[concat(parameters('commonNamespace'), '-nsg')]",
+    "nicName": "[concat(parameters('commonNamespace'), '-nic')]",
+    "vmName": "[concat(parameters('commonNamespace'), '-vm')]",
+    "vNetId": "[resourceId(parameters('netConfig').vNetRGName, 'Microsoft.Network/virtualNetworks', parameters('netConfig').vNetName)]",
+    "location": "[resourceGroup().location]"
+  },
+  "resources": [
+    {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[variables('publicIPAddressName')]",
+      "location": "[variables('location')]",
+      "tags": "[parameters('netConfig').tags]",
+      "properties": {
+        "publicIPAllocationMethod": "[parameters('netConfig').publicIPAddressType]",
+        "dnsSettings": {
+          "domainNameLabel": "[parameters('commonNamespace')]"
+        }
+      }
+    },
+    {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('nsgName')]",
+      "location": "[resourceGroup().location]",
+      "tags": "[parameters('netConfig').tags]",
+      "properties": {
+        "copy": [{
+          "name": "securityRules",
+          "count": "[length(secRules)]",
+          "input": {
+            "name": "[concat(secRules[copyIndex('securityRules')].ruleName)]",
+            "properties": {
+              "description": "[concat(secRules[copyIndex('securityRules')].ruleDescription)]",
+              "protocol": "[concat(secRules[copyIndex('securityRules')].ruleProtocol)]",
+              "sourcePortRange": "[concat(secRules[copyIndex('securityRules')].ruleSourcePortRange)]",
+              "destinationPortRange": "[concat(secRules[copyIndex('securityRules')].ruleDestinationPortRange)]",
+              "sourceAddressPrefix": "[concat(secRules[copyIndex('securityRules')].ruleSourceAddressPrefix)]",
+              "destinationAddressPrefix": "[concat(secRules[copyIndex('securityRules')].ruleDestinationAddressPrefix)]",
+              "access": "Allow",
+              "priority": "[mul(copyIndex('securityRules', 1), 100)]",
+              "direction": "Inbound"
+            }
+          }
+        }]
+      }
+    },
+    {
+      "apiVersion": "[variables('networkApiVersion')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('nicName')]",
+      "location": "[variables('location')]",
+      "tags": "[parameters('netConfig').tags]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+      ],
+      "properties": {
+        "enableAcceleratedNetworking": false,
+        "enableIPForwarding": true,
+        "networkSecurityGroup": {
+         "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName')))]"
+        },
+        "ipConfigurations": [
+          {
+            "name": "[concat(variables('nicName') '-ipcfg')]",
+            "properties": {
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
+              },
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[concat(parameters('vNetId'), '/subnets/', parameters('netConfig').vNetSubnets[variables('deploymentSubnetIndex')].name)]"
+              }
+            }
+          }
+        ]
+      }
+    },
+      {
+        "apiVersion": "[parameters('vmConfig').computeApiVersion]",
+        "type": "Microsoft.Compute/virtualMachines",
+        "name": "[variables('vmName')]",
+        "location": "[variables('location')]",
+        "plan": {
+          "name": "[parameters('vmConfig').imageSKU]",
+          "publisher": "[parameters('vmConfig').imagePublisher]",
+          "product": "[parameters('vmConfig').imageOffer]"
+        },
+        "tags": "[parameters('vmConfig').tags]",
+        "dependsOn": [
+          "[concat('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+        ],
+        "properties": {
+          "hardwareProfile": {
+            "vmSize": "[parameters('vmConfig').vmSize]"
+          },
+          "osProfile": {
+            "computerName": "[variables('vmName')]",
+            "adminUsername": "manage_with_meraki_dashboard",
+            "linuxConfiguration": {
+              "disablePasswordAuthentication": "true",
+              "ssh": {
+                "publicKeys": [
+                  {
+                    "path": "[concat('/home/', parameters('vmConfig').adminUsername, '/.ssh/authorized_keys')]",
+                    "keyData": "[parameters('vmConfig').sshPublicKey]"
+                  }
+                ]
+              }
+            }
+          },
+          "storageProfile": {
+            "imageReference": {
+              "publisher": "[parameters('vmConfig').imagePublisher]",
+              "offer": "[parameters('vmConfig').imageOffer]",
+              "sku": "[parameters('vmConfig').imageSKU]",
+              "version": "latest"
+            },
+            "osDisk": {
+              "osType": "Linux",
+              "caching": "[parameters('vmConfig').osManagedDiskCache]",
+              "name": "[concat(variables('vmName'), '-os')]",
+              "createOption": "FromImage",
+              "managedDisk": {
+                "storageAccountType": "[parameters('vmConfig').osManagedDiskType]"
+              }
+            }
+          },
+          "networkProfile": {
+            "networkInterfaces": [
+              { "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]",
+                "properties": {
+                  "primary": true
+                }
+              }
+            ]
+          }
+        }
+      }
+  ],
+  "outputs": {
+    "vNetId": {
+      "type": "string",
+      "value": ""
+    }
+  }
+}
