@@ -97,7 +97,7 @@
         },
         "ipConfigurations": [
           {
-            "name": "[concat(variables('nicName') '-ipcfg')]",
+            "name": "[concat(variables('nicName'), '-ipcfg')]",
             "properties": {
               "publicIPAddress": {
                 "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
