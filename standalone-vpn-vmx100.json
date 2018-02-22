@@ -93,7 +93,7 @@
         "enableAcceleratedNetworking": false,
         "enableIPForwarding": true,
         "networkSecurityGroup": {
-         "id": "[resourceId('Microsoft.Network/networkSecurityGroups/', variables('nsgName')))]"
+         "id": "[resourceId('Microsoft.Network/networkSecurityGroups/', variables('nsgName'))]"
         },
         "ipConfigurations": [
           {
