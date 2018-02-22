@@ -14,10 +14,16 @@
         "description": "Common namespace for deployed resources"
       }
     },
+    "vmConfig": {
+      "type": "object",
+      "metadata": {
+        "description": "Structure with VM config"
+      }
+    },
     "netConfig": {
       "type": "object",
       "metadata": {
-        "description": "Structure with configuratin"
+        "description": "Structure with Net config"
       }
     }
   },
