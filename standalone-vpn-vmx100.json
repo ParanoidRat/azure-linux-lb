@@ -131,9 +131,10 @@
           },
           "osProfile": {
             "computerName": "[variables('vmName')]",
-            "adminUsername": "manage_with_meraki_dashboard",
+            "adminUsername": "parameters('vmConfig').adminUsername",
+            "adminPassword": "parameters('vmConfig').adminPassword",
             "linuxConfiguration": {
-              "disablePasswordAuthentication": "true",
+              "disablePasswordAuthentication": "false",
               "ssh": {
                 "publicKeys": [
                   {
