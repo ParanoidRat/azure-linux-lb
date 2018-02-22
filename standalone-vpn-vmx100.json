@@ -104,7 +104,7 @@
               },
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
-                "id": "[concat(parameters('vNetId'), '/subnets/', parameters('netConfig').vNetSubnets[variables('deploymentSubnetIndex')].name)]"
+                "id": "[concat(variables('vNetId'), '/subnets/', parameters('netConfig').vNetSubnets[variables('deploymentSubnetIndex')].name)]"
               }
             }
           }
