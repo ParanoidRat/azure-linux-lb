@@ -29,7 +29,7 @@
   },
   "variables": {
     "networkApiVersion": "[parameters('netConfig').networkApiVersion]",
-    "subnetIndex": "[parameters('netConfig').subnetLbIntIndex]",
+    "subnetIndex": "[parameters('netConfig').deploymentSubnetIndex]",
     "secRules": "[parameters('netConfig').networkSecurityRules]",
     "publicIPAddressName": "[concat(parameters('commonNamespace'), '-ip')]",
     "nsgName": "[concat(parameters('commonNamespace'), '-nsg')]",
