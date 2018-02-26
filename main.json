@@ -36,7 +36,7 @@
   "variables": {
     "networkApiVersion": "[parameters('netConfig').networkApiVersion]",
     "computeApiVersion": "[parameters('vmConfig').computeApiVersion]",
-    "updateDomainCount": 2,
+    "updateDomainCount": 5,
     "faultDomainCount": 3,
     "location": "[resourceGroup().location]",
     "configHashVm": {
