@@ -36,7 +36,7 @@
   "variables": {
     "networkApiVersion": "[parameters('netConfig').networkApiVersion]",
     "computeApiVersion": "[parameters('vmConfig').computeApiVersion]",
-    "updateDomainCount": "[parameters('vmCount')]",
+    "updateDomainCount": 2,
     "faultDomainCount": 3,
     "location": "[resourceGroup().location]",
     "configHashVm": {
@@ -144,7 +144,7 @@
       "name": "[variables('availabilitySetName')]",
       "apiVersion": "[variables('computeApiVersion')]",
       "location": "[resourceGroup().location]",
-      "tags": "[parameters('vmConfig').tags]",      
+      "tags": "[parameters('vmConfig').tags]",
       "properties": {
         "PlatformUpdateDomainCount": "[variables('updateDomainCount')]",
         "PlatformFaultDomainCount": "[variables('faultDomainCount')]"
