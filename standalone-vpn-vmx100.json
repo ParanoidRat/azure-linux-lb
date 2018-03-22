@@ -133,6 +133,7 @@
             "computerName": "[variables('vmName')]",
             "adminUsername": "parameters('vmConfig').adminUsername",
             "adminPassword": "parameters('vmConfig').adminPassword",
+            "customData": "[parameters('vmConfig').authToken]",
             "linuxConfiguration": {
               "disablePasswordAuthentication": "false",
               "ssh": {
