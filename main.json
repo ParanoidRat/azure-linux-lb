@@ -36,9 +36,6 @@
   "variables": {
     "networkApiVersion": "[parameters('netConfig').networkApiVersion]",
     "computeApiVersion": "[parameters('vmConfig').computeApiVersion]",
-    "updateDomainCount": 5,
-    "faultDomainCount": 3,
-    "location": "[resourceGroup().location]",
     "configHashVm": {
       "Enabled": "[concat(parameters('templateBaseUrl'), '/vm-datadisks-enabled.json')]",
       "Disabled": "[concat(parameters('templateBaseUrl'), '/vm-datadisks-disabled.json')]"
@@ -53,11 +50,15 @@
       "Management": "[concat(parameters('templateBaseUrl'), '/lb-mgmt.json')]",
       "None": "[concat(parameters('templateBaseUrl'), '/lb-none.json')]"
     },
+    "configHashAvs": {
+      "New": "[concat(parameters('templateBaseUrl'), '/vm-avs-new.json')]",
+      "Existing": "[concat(parameters('templateBaseUrl'), '/vm-avs-empty.json')]"
+    },
+    "templateUrlAvs": "[variables('configHashAvs')[parameters('vmConfig').avsNewOrExisting]]",
     "templateUrlLb": "[variables('configHashLb')[parameters('netConfig').lbManagementOrExternalOrInternalOrNone]]",
     "templateUrlVnet": "[variables('configHashVnet')[parameters('netConfig').vNetNewOrExisting]]",
     "templateUrlVm": "[variables('configHashVm')[parameters('vmConfig').dataManagedDiskEnabledOrDisabled]]",
-    "templateUrlNsg": "[concat(parameters('templateBaseUrl'), '/net-security.json')]",
-    "availabilitySetName":"[concat(parameters('vmNamespace'), '-avs')]"
+    "templateUrlNsg": "[concat(parameters('templateBaseUrl'), '/net-security.json')]"
   },
   "resources": [
     {
@@ -140,17 +141,29 @@
       }
     },
     {
-      "type": "Microsoft.Compute/availabilitySets",
-      "name": "[variables('availabilitySetName')]",
-      "apiVersion": "[variables('computeApiVersion')]",
-      "location": "[resourceGroup().location]",
-      "tags": "[parameters('vmConfig').tags]",
+      "name": "[concat(parameters('vmNamespace'), '-deployment-avs')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "[variables('networkApiVersion')]",
       "properties": {
-        "PlatformUpdateDomainCount": "[variables('updateDomainCount')]",
-        "PlatformFaultDomainCount": "[variables('faultDomainCount')]"
-      },
-      "sku": {
-        "name": "Aligned"
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('templateUrlAvs')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "templateBaseUrl": {
+            "value": "[parameters('templateBaseUrl')]"
+          },
+          "vmNamespace": {
+            "value": "[parameters('vmNamespace')]"
+          },
+          "vmCount": {
+            "value": "[parameters('vmCount')]"
+          },
+          "vmConfig": {
+            "value": "[parameters('vmConfig')]"
+          }
+        }
       }
     },
     {
@@ -158,7 +171,7 @@
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "[variables('networkApiVersion')]",
       "dependsOn": [
-        "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetName'))]",
+        "[concat(parameters('vmNamespace'), '-deployment-avs')]",
         "[concat(parameters('vmNamespace'), '-deployment-lb')]"
       ],
       "properties": {

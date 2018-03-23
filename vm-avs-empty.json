@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "templateBaseUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Base uri for nested templates"
+      }
+    },
+    "vmNamespace": {
+      "type": "string",
+      "metadata": {
+        "description": "Unique namespace for cluster"
+      }
+    },
+    "vmCount": {
+      "type": "int",
+      "metadata": {
+        "description": "Number of VMs in cluster"
+      }
+    },
+    "vmConfig": {
+      "type": "object",
+      "metadata": {
+        "description": "Structure with VM config"
+      }
+    }
+  },
+  "variables": {
+    "availabilitySetName":"[concat(parameters('vmNamespace'), '-avs')]"
+  },
+  "resources": [
+  ],
+  "outputs": {
+    "availabilitySetId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Compute/availabilitySets', variables('availabilitySetName'))]"
+    }
+  }
+}
