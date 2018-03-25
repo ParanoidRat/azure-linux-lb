@@ -133,18 +133,7 @@
             "computerName": "[variables('vmName')]",
             "adminUsername": "parameters('vmConfig').adminUsername",
             "adminPassword": "parameters('vmConfig').adminPassword",
-            "customData": "[base64(parameters('vmConfig').authToken)]",
-            "linuxConfiguration": {
-              "disablePasswordAuthentication": "false",
-              "ssh": {
-                "publicKeys": [
-                  {
-                    "path": "[concat('/home/', parameters('vmConfig').adminUsername, '/.ssh/authorized_keys')]",
-                    "keyData": "[parameters('vmConfig').sshPublicKey]"
-                  }
-                ]
-              }
-            }
+            "customData": "[base64(parameters('vmConfig').authToken)]"
           },
           "storageProfile": {
             "imageReference": {
