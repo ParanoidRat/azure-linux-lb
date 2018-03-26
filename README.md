@@ -1,10 +1,12 @@
 # Load-balanced Linux Cluster
-This repository contains Azure templates to deploy a load-balanced Linux-based
-generic cluster in Microsoft Azure Recourses Manager (ARM). It also has
-[cisco-csr1000v.json](cisco-csr1000v.json) template for deployment of Cisco
-CSR-1000v virtual router to build VPN tunnels to the environment.
+This repository contains Azure Resource Manager (ARM) templates to deploy a load-balanced Linux-based generic cluster in Microsoft Azure . It also has
+following standalone templates:
+-   [standalone-vpn-vmx100.json](standalone-vpn-vmx100.json)
+-   [standalone-vpn-csr1000v.json](standalone-vpn-csr1000v.json)
 
-## Getting Started
+to deploy virtual routers and build VPN tunnels to the environment.
+
+## Deploying Linux Cluster
 ```
 /usr/bin/az group deployment create \
   --resource-group "RG-NAME" \
@@ -13,7 +15,7 @@ CSR-1000v virtual router to build VPN tunnels to the environment.
   --parameters "@/path/to/params.json"
 ```
 
-## Parameters: Main template
+### Parameters: Main template
 ```json
 "templateBaseUrl": {"value": "https://raw.githubusercontent.com/ParanoidRat/azure-linux-lb/master"},
 "vmNamespace": { "value": "fustercluck" },
@@ -24,6 +26,8 @@ CSR-1000v virtual router to build VPN tunnels to the environment.
 
   "vmSize": "Standard_DS2",
 
+  "avsNewOrExisting": "New",
+
   "osManagedDiskType": "Premium_LRS",
   "osManagedDiskCache": "ReadWrite",
 
@@ -33,22 +37,27 @@ CSR-1000v virtual router to build VPN tunnels to the environment.
   "dataManagedDiskSizeGb": 64,
   "dataManagedDiskCache": "None",
 
-  "tags": {
-    "Environment": "Development"
-  },
-
-  "imagePublisher": "Canonical",
-  "imageOffer": "UbuntuServer",
-  "imageSKU": "16.04-LTS",
+  "imagePublisher": "OpenLogic",
+  "imageOffer": "CentOS",
+  "imageSKU": "7.4",
 
   "adminUsername": "<USER-NAME>",
-  "sshPublicKey": "ssh-rsa <SSH-PUB-KEY>"
+  "sshPublicKey": "ssh-rsa <SSH-PUB-KEY>",
+
+  "tags": {
+    "Environment": "Development"
+  }
 } },
 
 "netConfig": { "value": {
   "networkApiVersion": "2017-06-01",
 
+  "lbManagementOrExternalOrInternalOrNone": "Management",
+
   "publicIPAddressType": "Static",
+
+  "vNetNewOrExisting": "Existing",
+  "vNetRGName": "<VNET-RG-NAME>",
 
   "vNetName": "<VNET-NAME>",
   "vNetAddressPrefix": "10.0.0.0/16",
@@ -63,6 +72,8 @@ CSR-1000v virtual router to build VPN tunnels to the environment.
       "prefix": "10.0.2.0/24",
     }
   ],
+
+  "subnetLbIntIndex": 1,
 
   "networkSecurityRules": [
     {
@@ -83,7 +94,117 @@ CSR-1000v virtual router to build VPN tunnels to the environment.
       "ruleSourceAddressPrefix": "4.4.4.4/32",
       "ruleDestinationAddressPrefix": "*",
     },
+    {
+      "ruleName": "AZURE-FABRIC",
+      "ruleDescription": "Allows any inbound probes from Azure fabric",
+      "ruleProtocol": "Tcp",
+      "ruleSourcePortRange": "*",
+      "ruleDestinationPortRange": "*",
+      "ruleSourceAddressPrefix": "168.63.129.16",
+      "ruleDestinationAddressPrefix": "*"
+    }
   ],
+
+  "lbProbes": [],
+  "lbRules": [],
+
+  "tags": {
+    "Environment": "Development"
+  }
+} }
+```
+
+## Deploying Meraki vMX100
+```
+/usr/bin/az group deployment create \
+  --resource-group "RG-NAME" \
+  --name "DEPLOYMENT-NAME" \
+  --template-uri "https://raw.githubusercontent.com/ParanoidRat/azure-linux-lb/master/standalone-vpn-vmx100.json" \
+  --parameters "@/path/to/params.json"
+```
+
+### Parameters: Meraki vMX100 template
+```json
+"templateBaseUrl": { "value": "https://raw.githubusercontent.com/ParanoidRat/azure-linux-lb/master" },
+
+"commonNamespace": { "value": "fustercluck" },
+
+"vmConfig": { "value": {
+  "computeApiVersion": "2017-03-30",
+
+  "vmSize": "Standard_D2_v3",
+
+  "osManagedDiskType": "Standard_LRS",
+  "osManagedDiskCache": "ReadWrite",
+
+  "imagePublisher": "cisco",
+  "imageOffer": "cisco-meraki-vmx100",
+  "imageSKU": "vmx100",
+
+  "authToken": "<TOKEN-FROM-MERAKI-DASHBOARD>",
+
+  "adminUsername": "manage_with_meraki_dashboard",
+  "adminPassword": "not_used",
+  "tags": {
+    "Environment": "Development"
+  }
+} },
+
+"netConfig": { "value": {
+  "networkApiVersion": "2017-06-01",
+
+  "publicIPAddressType": "Static",
+
+  "vNetRGName": "<VNET-RG-NAME>",
+
+  "vNetName": "<VNET-NAME>",
+  "vNetAddressPrefix": "10.0.0.0/16",
+
+  "vNetSubnets": [
+    {
+      "name": "subnet-ext",
+      "prefix": "10.0.1.0/24",
+    },
+    {
+      "name": "subnet-int",
+      "prefix": "10.0.2.0/24",
+    }
+  ],
+
+  "deploymentSubnetIndex": 0,
+
+  "networkSecurityRules": [
+    {
+      "ruleName": "SSH-HOST01",
+      "ruleDescription": "Allows inbound SSH from specific host",
+      "ruleProtocol": "Tcp",
+      "ruleSourcePortRange": "*",
+      "ruleDestinationPortRange": "22",
+      "ruleSourceAddressPrefix": "8.8.8.8/32",
+      "ruleDestinationAddressPrefix": "*",
+    },
+    {
+      "ruleName": "SSH-HOST02",
+      "ruleDescription": "Allows inbound SSH from specific host",
+      "ruleProtocol": "Tcp",
+      "ruleSourcePortRange": "*",
+      "ruleDestinationPortRange": "22",
+      "ruleSourceAddressPrefix": "4.4.4.4/32",
+      "ruleDestinationAddressPrefix": "*",
+    },
+    {
+      "ruleName": "AZURE-FABRIC",
+      "ruleDescription": "Allows any inbound probes from Azure fabric",
+      "ruleProtocol": "Tcp",
+      "ruleSourcePortRange": "*",
+      "ruleDestinationPortRange": "*",
+      "ruleSourceAddressPrefix": "168.63.129.16",
+      "ruleDestinationAddressPrefix": "*"
+    }
+  ],
+  "tags": {
+    "Environment": "dfir-vpn-meraki"
+  }
 } }
 ```
 
@@ -161,9 +282,7 @@ CSR-1000v virtual router to build VPN tunnels to the environment.
 -   [**ParanoidRat**][1]
 
 ## License
-The work is licensed under the CC-BY-SA 4.0 License. Unless otherwise stated,
-modifications are also licensed under the CC-BY-SA 4.0 License. See the
-[LICENSE.md](LICENSE.md) file for details and specific licensing of the
+The work is licensed under the CC-BY-SA 4.0 License. Unless otherwise stated, modifications are also licensed under the CC-BY-SA 4.0 License. See the [LICENSE.md](LICENSE.md) file for details and specific licensing of the
 modifications.
 
 You should have received a copy of the license along with this work
