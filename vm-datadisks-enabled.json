@@ -87,7 +87,10 @@
                 "name": "[concat(parameters('vmNamespace'), copyIndex(), '-data', copyIndex('dataDisks'))]",
                 "caching":"[parameters('vmConfig').dataManagedDiskCache]",
                 "createOption": "Empty",
-                "diskSizeGB": "[parameters('vmConfig').dataManagedDiskSizeGb]"
+                "diskSizeGB": "[parameters('vmConfig').dataManagedDiskSizeGb]",
+                "managedDisk": {
+                  "storageAccountType": "[parameters('vmConfig').dataManagedDiskType]"
+                }
             }
           }]
         },
