@@ -203,7 +203,7 @@ to deploy virtual routers and build VPN tunnels to the environment.
     }
   ],
   "tags": {
-    "Environment": "dfir-vpn-meraki"
+    "Environment": "Development"
   }
 } }
 ```
